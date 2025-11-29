@@ -46,6 +46,24 @@ const TenantForm = ({ tenant, onClose }) => {
     if (tenant) {
       setFormData({
         ...tenant,
+        address: tenant.address || {
+          street: '',
+          city: '',
+          state: '',
+          country: '',
+          zipCode: '',
+        },
+        settings: tenant.settings || {
+          currency: 'USD',
+          timezone: 'UTC',
+          language: 'en',
+          maxStudents: 1000,
+          maxTeachers: 100,
+        },
+        subscription: tenant.subscription || {
+          plan: 'trial',
+          status: 'active',
+        },
         adminUser: {
           email: '',
           password: '',
