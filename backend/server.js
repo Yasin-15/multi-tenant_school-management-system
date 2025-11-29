@@ -34,21 +34,39 @@ import timetableRoutes from './routes/timetableRoutes.js';
 const app = express();
 const httpServer = createServer(app);
 
+// CORS configuration - allow multiple origins
+const allowedOrigins = [
+    'http://localhost:5173',
+    'http://localhost:5000',
+    process.env.FRONTEND_URL,
+    'https://multi-tenant-school-management-syst-sable.vercel.app',
+    'https://myschoolcom-yaasiins-projects.vercel.app'
+].filter(Boolean);
+
+const corsOptions = {
+    origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        
+        if (allowedOrigins.some(allowed => origin.startsWith(allowed))) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant-ID']
+};
+
 // Socket.io setup
 const io = new Server(httpServer, {
-    cors: {
-        origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-        methods: ['GET', 'POST'],
-        credentials: true
-    }
+    cors: corsOptions
 });
 
 // Middleware
 app.use(helmet());
-app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-    credentials: true
-}));
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(compression());

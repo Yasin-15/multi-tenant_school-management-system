@@ -224,8 +224,18 @@ Choose either Vercel (recommended) or Netlify:
 
 **MongoDB Connection Failed**
 - Verify MongoDB Atlas connection string is correct
-- Check that IP whitelist includes 0.0.0.0/0
+- **Check that IP whitelist includes 0.0.0.0/0** (most common issue!)
+  - Go to MongoDB Atlas → Network Access
+  - Ensure "0.0.0.0/0" is in the list
+  - Wait 1-2 minutes after adding for it to take effect
 - Ensure database user has correct permissions
+- Verify password doesn't contain special characters that need URL encoding
+- Test connection string locally first
+
+**"No open ports detected" on Render**
+- This usually means the app crashed before binding to port
+- Check Render logs for the actual error (usually MongoDB connection)
+- Server now binds to port first, then connects to database
 
 **Build Failed on Render**
 - Check build logs in Render dashboard
