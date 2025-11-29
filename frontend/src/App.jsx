@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { fetchCurrentUser } from './features/auth/authSlice';
+import { ToastProvider } from './context/ToastContext';
 import './i18n/config';
 import Login from './pages/Login';
 import DashboardLayout from './layouts/DashboardLayout';
@@ -68,8 +69,9 @@ function App() {
   }, [dispatch]);
 
   return (
-    <Router>
-      <Routes>
+    <ToastProvider>
+      <Router>
+        <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
 
@@ -132,7 +134,8 @@ function App() {
 
         <Route path="/" element={<Navigate to="/login" replace />} />
       </Routes>
-    </Router>
+      </Router>
+    </ToastProvider>
   );
 }
 

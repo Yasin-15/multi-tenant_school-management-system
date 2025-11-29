@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { Plus, Search, Edit, Trash2, Eye, X } from 'lucide-react';
 import { studentService } from '../../services/studentService';
 import { classService } from '../../services/classService';
+import { useToastContext } from '../../context/ToastContext';
 import Modal from '../../components/ui/modal';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 
 const Students = () => {
+  const toast = useToastContext();
   const [students, setStudents] = useState([]);
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -71,7 +73,7 @@ const Students = () => {
       setStudents(response.data || []);
     } catch (error) {
       console.error('Error fetching students:', error);
-      alert('Error fetching students');
+      toast.error('Failed to fetch students');
     } finally {
       setLoading(false);
     }
@@ -200,17 +202,17 @@ const Students = () => {
 
       if (isEditMode) {
         await studentService.update(selectedStudent._id, studentData);
-        alert('Student updated successfully');
+        toast.success('Student updated successfully! 🎉');
       } else {
         await studentService.create(studentData);
-        alert('Student created successfully');
+        toast.success('Student created successfully! 🎉');
       }
 
       setIsModalOpen(false);
       fetchStudents();
     } catch (error) {
       console.error('Error saving student:', error);
-      alert(error.response?.data?.message || 'Error saving student');
+      toast.error(error.response?.data?.message || 'Failed to save student');
     } finally {
       setSaving(false);
     }
@@ -220,11 +222,11 @@ const Students = () => {
     if (window.confirm('Are you sure you want to delete this student? This action cannot be undone.')) {
       try {
         await studentService.delete(id);
-        alert('Student deleted successfully');
+        toast.success('Student deleted successfully');
         fetchStudents();
       } catch (error) {
         console.error('Error deleting student:', error);
-        alert('Error deleting student');
+        toast.error('Failed to delete student');
       }
     }
   };
