@@ -36,7 +36,7 @@ router.delete('/:id', deleteNotification);
 // Delete all read notifications
 router.delete('/read/all', deleteAllRead);
 
-// Create notification (admin only)
-router.post('/', authorize('admin'), createNotification);
+// Create notification (admin and super admin)
+router.post('/', authorize('admin', 'super_admin', 'superadmin'), createNotification);
 
 export default router;

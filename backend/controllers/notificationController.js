@@ -9,7 +9,7 @@ const getIO = (req) => {
 export const getNotifications = async (req, res) => {
   try {
     const { page = 1, limit = 20, unreadOnly = false } = req.query;
-    
+
     const query = {
       tenant: req.user.tenant,
       recipient: req.user._id
@@ -150,22 +150,53 @@ export const deleteAllRead = async (req, res) => {
   }
 };
 
-// Create notification (admin only)
+// Create notification (admin and super admin)
 export const createNotification = async (req, res) => {
   try {
-    const { recipients, type, title, message, link } = req.body;
+    console.log('[Create Notification] Request by user:', req.user?.email, 'Role:', req.user?.role);
+    console.log('[Create Notification] Request body:', JSON.stringify(req.body, null, 2));
+
+    const { recipients, type, title, message, link, tenantId } = req.body;
+
+    // Validate required fields
+    if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
+      return res.status(400).json({
+        message: 'Recipients array is required and cannot be empty'
+      });
+    }
+
+    if (!title || !message) {
+      return res.status(400).json({
+        message: 'Title and message are required'
+      });
+    }
+
+    // Determine which tenant to use
+    // Super admins can specify tenantId to send notifications to any tenant
+    // Regular admins use their own tenant
+    let targetTenant = req.user.tenant;
+
+    if (req.user.role === 'super_admin' || req.user.role === 'superadmin') {
+      if (tenantId) {
+        targetTenant = tenantId;
+        console.log('[Create Notification] Super admin sending to tenant:', tenantId);
+      } else {
+        console.log('[Create Notification] Super admin using own tenant');
+      }
+    }
 
     // Create notifications for multiple recipients
     const notifications = recipients.map(recipientId => ({
-      tenant: req.user.tenant,
+      tenant: targetTenant,
       recipient: recipientId,
-      type,
+      type: type || 'info',
       title,
       message,
       link
     }));
 
     const created = await Notification.insertMany(notifications);
+    console.log('[Create Notification] Successfully created', created.length, 'notifications');
 
     // Emit real-time notification to each recipient
     const io = getIO(req);
@@ -180,8 +211,12 @@ export const createNotification = async (req, res) => {
       count: created.length
     });
   } catch (error) {
-    console.error('Error creating notification:', error);
-    res.status(500).json({ message: 'Error creating notification' });
+    console.error('[Create Notification] Error:', error);
+    console.error('[Create Notification] Stack:', error.stack);
+    res.status(500).json({
+      message: 'Error creating notification',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 

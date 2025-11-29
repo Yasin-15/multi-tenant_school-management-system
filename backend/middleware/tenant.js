@@ -47,7 +47,7 @@ export const tenantMiddleware = async (req, res, next) => {
         if (!tenant && req.path === '/login' && req.body.role === 'super_admin') {
             console.log('[Tenant Middleware] Super admin login detected, using system tenant');
             tenant = await Tenant.findOne({ subdomain: 'system' });
-            
+
             // Create system tenant if it doesn't exist
             if (!tenant) {
                 tenant = await Tenant.create({
@@ -76,11 +76,13 @@ export const tenantMiddleware = async (req, res, next) => {
             });
         }
 
-        // Check subscription status (skip for system tenant)
-        if (tenant.subdomain !== 'system' && tenant.subscription.status !== 'active') {
+        // Check subscription status (skip for system tenant and trial)
+        if (tenant.subdomain !== 'system' &&
+            tenant.subscription.status !== 'active' &&
+            tenant.subscription.plan !== 'trial') {
             return res.status(403).json({
                 success: false,
-                message: 'Tenant subscription is not active'
+                message: 'Tenant subscription is not active. Please contact support.'
             });
         }
 
