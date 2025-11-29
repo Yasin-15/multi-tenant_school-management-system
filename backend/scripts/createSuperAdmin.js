@@ -30,7 +30,7 @@ const createSuperAdmin = async () => {
         const password = 'Yaasiin@2026';
         const firstName = 'Yasin';
         const lastName = 'Mohamed';
-
+  
         // Check if super admin already exists
         const existingUser = await User.findOne({ email, role: 'super_admin' });
         
