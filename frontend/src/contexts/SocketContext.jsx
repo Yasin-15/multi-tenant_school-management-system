@@ -28,7 +28,9 @@ export const SocketProvider = ({ children }) => {
     }
 
     // Create socket connection
-    const newSocket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000', {
+    // Remove /api from the URL since Socket.IO connects to the root server
+    const socketUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '');
+    const newSocket = io(socketUrl, {
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionDelay: 1000,
