@@ -48,7 +48,7 @@ const Login = () => {
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-4">
-                        {/* <div className="space-y-2">
+                        <div className="space-y-2">
                             <Label htmlFor="role">Select Role</Label>
                             <select
                                 id="role"
@@ -61,7 +61,7 @@ const Login = () => {
                                 <option value="admin">Admin</option>
                                 <option value="super_admin">Super Admin</option>
                             </select>
-                        </div> */}
+                        </div>
                         <div className="space-y-2">
                             <Label htmlFor="email">Email</Label>
                             <Input
@@ -93,12 +93,13 @@ const Login = () => {
                     <p className="text-sm text-muted-foreground">
                         Forgot your password? Contact administration.
                     </p>
-                    {/* <div className="text-xs text-muted-foreground border-t pt-2 w-full">
+                    <div className="text-xs text-muted-foreground border-t pt-2 w-full">
                         <p className="font-semibold mb-1">Demo Credentials:</p>
-                        <p>Admin: admin@demo.com / admin123</p>
-                        <p>Teacher: teacher1@demo.com / teacher123</p>
-                        <p>Student: student1@demo.com / student123</p>
-                    </div> */}
+                        <p className="mb-1"><strong>Super Admin:</strong> yasindev54@gmail.com / Yaasiin@2026</p>
+                        <p className="mb-1"><strong>Admin:</strong> admin@demo.com / admin123</p>
+                        <p className="mb-1"><strong>Teacher:</strong> teacher1@demo.com / teacher123</p>
+                        <p><strong>Student:</strong> student1@demo.com / student123</p>
+                    </div>
                 </CardFooter>
             </Card>
         </div>

@@ -1,5 +1,6 @@
 import Student from '../models/Student.js';
 import User from '../models/User.js';
+import { generateStudentId, generateRollNumber, generateHemisId, getTenantCode } from '../utils/idGenerator.js';
 
 /**
  * @desc    Get all students
@@ -127,14 +128,14 @@ export const createStudent = async (req, res) => {
             email, password, firstName, lastName, phone, dateOfBirth, gender, address
         } = userData;
 
-        const {
-            studentId, admissionNumber, admissionDate, class: classId, section, rollNumber,
+        let {
+            studentId, hemisId, admissionNumber, admissionDate, class: classId, section, rollNumber,
             academicYear, guardianName, guardianPhone, guardianEmail, guardianRelation,
             bloodGroup, medicalConditions, previousSchool, status
         } = studentData;
 
         // Validate required fields
-        if (!email || !password || !firstName || !lastName || !studentId || !admissionNumber) {
+        if (!email || !password || !firstName || !lastName || !admissionNumber) {
             return res.status(400).json({
                 success: false,
                 message: 'Missing required fields'
@@ -150,13 +151,28 @@ export const createStudent = async (req, res) => {
             });
         }
 
-        // Check if student ID already exists
-        const existingStudent = await Student.findOne({ studentId, tenant: req.tenant._id });
-        if (existingStudent) {
-            return res.status(400).json({
-                success: false,
-                message: 'Student ID already exists'
-            });
+        // Auto-generate IDs if not provided
+        const tenantCode = getTenantCode(req.tenant);
+        
+        if (!studentId) {
+            studentId = await generateStudentId(req.tenant._id, tenantCode);
+        } else {
+            // Check if provided student ID already exists
+            const existingStudent = await Student.findOne({ studentId, tenant: req.tenant._id });
+            if (existingStudent) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Student ID already exists'
+                });
+            }
+        }
+
+        if (!hemisId) {
+            hemisId = await generateHemisId(req.tenant._id, tenantCode);
+        }
+
+        if (!rollNumber && classId && section) {
+            rollNumber = await generateRollNumber(req.tenant._id, classId, section);
         }
 
         // Create user account
@@ -180,6 +196,7 @@ export const createStudent = async (req, res) => {
             tenant: req.tenant._id,
             user: user._id,
             studentId,
+            hemisId,
             admissionNumber,
             admissionDate,
             class: classId,

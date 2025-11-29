@@ -62,8 +62,8 @@ export const tenantMiddleware = async (req, res, next) => {
 
         // Method 5: For regular login without tenant, allow it to proceed
         // The auth controller will find the user's tenant
-        if (!tenant && req.path === '/login' && req.body.role !== 'super_admin') {
-            console.log('[Tenant Middleware] Regular login without tenant, will be resolved in auth controller');
+        if (!tenant && req.path === '/login') {
+            console.log('[Tenant Middleware] Login without tenant, will be resolved in auth controller');
             // Don't return error, let the auth controller handle it
             return next();
         }

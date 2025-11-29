@@ -17,6 +17,11 @@ const studentSchema = new mongoose.Schema({
         required: true,
         unique: true
     },
+    hemisId: {
+        type: String,
+        unique: true,
+        sparse: true
+    },
     admissionNumber: {
         type: String,
         required: true

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Edit, Trash2, Eye, X } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Eye, X, RefreshCw } from 'lucide-react';
 import { studentService } from '../../services/studentService';
 import { classService } from '../../services/classService';
+import { utilityService } from '../../services/utilityService';
 import { useToastContext } from '../../context/ToastContext';
 import Modal from '../../components/ui/modal';
 import { Button } from '../../components/ui/button';
@@ -48,6 +49,9 @@ const Students = () => {
 
   const [formData, setFormData] = useState(initialFormData);
   const [errors, setErrors] = useState({});
+  const [previewIds, setPreviewIds] = useState(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
+  const [useAutoIds, setUseAutoIds] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
@@ -88,6 +92,20 @@ const Students = () => {
     }
   };
 
+  const fetchPreviewIds = async (classId = null, section = null) => {
+    if (!useAutoIds) return;
+    
+    setLoadingPreview(true);
+    try {
+      const response = await utilityService.previewNextIds(classId, section);
+      setPreviewIds(response.data);
+    } catch (error) {
+      console.error('Error fetching preview IDs:', error);
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
   const validateForm = () => {
     const newErrors = {};
 
@@ -99,7 +117,10 @@ const Students = () => {
     if (!isEditMode && !formData.password) newErrors.password = 'Password is required';
     else if (!isEditMode && formData.password.length < 6) newErrors.password = 'Password must be at least 6 characters';
     
-    if (!formData.studentId.trim()) newErrors.studentId = 'Student ID is required';
+    // Only require manual IDs if auto-generation is disabled
+    if (!useAutoIds && !isEditMode) {
+      if (!formData.studentId.trim()) newErrors.studentId = 'Student ID is required';
+    }
     if (!formData.admissionNumber.trim()) newErrors.admissionNumber = 'Admission number is required';
     if (!formData.dateOfBirth) newErrors.dateOfBirth = 'Date of birth is required';
     if (!formData.gender) newErrors.gender = 'Gender is required';
@@ -115,13 +136,26 @@ const Students = () => {
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
+
+    // Fetch preview IDs when class or section changes
+    if ((name === 'class' || name === 'section') && useAutoIds && !isEditMode) {
+      const classId = name === 'class' ? value : formData.class;
+      const section = name === 'section' ? value : formData.section;
+      if (classId && section) {
+        fetchPreviewIds(classId, section);
+      }
+    }
   };
 
   const handleOpenAddModal = () => {
     setFormData(initialFormData);
     setIsEditMode(false);
     setErrors({});
+    setPreviewIds(null);
+    setUseAutoIds(true);
     setIsModalOpen(true);
+    // Fetch initial preview IDs
+    fetchPreviewIds();
   };
 
   const handleOpenEditModal = (student) => {
@@ -495,20 +529,78 @@ const Students = () => {
 
           {/* Academic Information */}
           <div className="border-t pt-6">
-            <h3 className="text-lg font-semibold mb-4 text-gray-900">Academic Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Student ID <span className="text-red-500">*</span>
-                </label>
-                <Input
-                  name="studentId"
-                  value={formData.studentId}
-                  onChange={handleInputChange}
-                  placeholder="e.g., STU2024001"
-                />
-                {errors.studentId && <p className="text-red-500 text-xs mt-1">{errors.studentId}</p>}
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Academic Information</h3>
+              {!isEditMode && (
+                <div className="flex items-center space-x-2">
+                  <label className="flex items-center text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={useAutoIds}
+                      onChange={(e) => setUseAutoIds(e.target.checked)}
+                      className="mr-2"
+                    />
+                    Auto-generate IDs
+                  </label>
+                  {useAutoIds && (
+                    <button
+                      type="button"
+                      onClick={() => fetchPreviewIds(formData.class, formData.section)}
+                      className="text-blue-600 hover:text-blue-800 p-1"
+                      title="Refresh preview"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* ID Preview Box */}
+            {!isEditMode && useAutoIds && previewIds && (
+              <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-semibold text-blue-900">Auto-Generated IDs (Preview)</h4>
+                  {loadingPreview && <span className="text-xs text-blue-600">Updating...</span>}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                  <div>
+                    <p className="text-blue-700 font-medium">Student ID</p>
+                    <p className="text-blue-900 font-mono">{previewIds.studentId}</p>
+                  </div>
+                  <div>
+                    <p className="text-blue-700 font-medium">HEMIS ID</p>
+                    <p className="text-blue-900 font-mono">{previewIds.hemisId}</p>
+                  </div>
+                  {previewIds.rollNumber && (
+                    <div>
+                      <p className="text-blue-700 font-medium">Roll Number</p>
+                      <p className="text-blue-900 font-mono">{previewIds.rollNumber}</p>
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-blue-600 mt-2">
+                  ℹ️ These IDs will be automatically assigned when you create the student
+                </p>
               </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {(!useAutoIds || isEditMode) && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Student ID {!useAutoIds && <span className="text-red-500">*</span>}
+                  </label>
+                  <Input
+                    name="studentId"
+                    value={formData.studentId}
+                    onChange={handleInputChange}
+                    placeholder="e.g., STU2024001"
+                    disabled={isEditMode}
+                  />
+                  {errors.studentId && <p className="text-red-500 text-xs mt-1">{errors.studentId}</p>}
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -553,13 +645,25 @@ const Students = () => {
                 {errors.class && <p className="text-red-500 text-xs mt-1">{errors.class}</p>}
               </div>
 
+              {(!useAutoIds || isEditMode) && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Roll Number</label>
+                  <Input
+                    name="rollNumber"
+                    value={formData.rollNumber}
+                    onChange={handleInputChange}
+                    placeholder="e.g., 01"
+                  />
+                </div>
+              )}
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Roll Number</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Section</label>
                 <Input
-                  name="rollNumber"
-                  value={formData.rollNumber}
+                  name="section"
+                  value={formData.section}
                   onChange={handleInputChange}
-                  placeholder="e.g., 01"
+                  placeholder="e.g., A, B, C"
                 />
               </div>
 

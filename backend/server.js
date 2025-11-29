@@ -30,6 +30,7 @@ import reportRoutes from './routes/reportRoutes.js';
 import examRoutes from './routes/examRoutes.js';
 import payrollRoutes from './routes/payrollRoutes.js';
 import timetableRoutes from './routes/timetableRoutes.js';
+import utilityRoutes from './routes/utilityRoutes.js';
 
 const app = express();
 const httpServer = createServer(app);
@@ -116,6 +117,7 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/exams', examRoutes);
 app.use('/api/payroll', payrollRoutes);
 app.use('/api/timetable', timetableRoutes);
+app.use('/api/utilities', utilityRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

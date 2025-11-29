@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Edit, Trash2, Eye } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Eye, RefreshCw } from 'lucide-react';
 import { teacherService } from '../../services/teacherService';
 import { subjectService } from '../../services/subjectService';
+import { utilityService } from '../../services/utilityService';
 import Modal from '../../components/ui/modal';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -46,6 +47,9 @@ const Teachers = () => {
 
   const [formData, setFormData] = useState(initialFormData);
   const [errors, setErrors] = useState({});
+  const [previewIds, setPreviewIds] = useState(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
+  const [useAutoIds, setUseAutoIds] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
@@ -86,6 +90,20 @@ const Teachers = () => {
     }
   };
 
+  const fetchPreviewIds = async () => {
+    if (!useAutoIds) return;
+    
+    setLoadingPreview(true);
+    try {
+      const response = await utilityService.previewNextIds();
+      setPreviewIds(response.data);
+    } catch (error) {
+      console.error('Error fetching preview IDs:', error);
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
   const validateForm = () => {
     const newErrors = {};
 
@@ -97,7 +115,10 @@ const Teachers = () => {
     if (!isEditMode && !formData.password) newErrors.password = 'Password is required';
     else if (!isEditMode && formData.password.length < 6) newErrors.password = 'Password must be at least 6 characters';
     
-    if (!formData.employeeId.trim()) newErrors.employeeId = 'Employee ID is required';
+    // Only require manual employee ID if auto-generation is disabled
+    if (!useAutoIds && !isEditMode) {
+      if (!formData.employeeId.trim()) newErrors.employeeId = 'Employee ID is required';
+    }
     if (!formData.designation.trim()) newErrors.designation = 'Designation is required';
     if (!formData.dateOfBirth) newErrors.dateOfBirth = 'Date of birth is required';
     if (!formData.gender) newErrors.gender = 'Gender is required';
@@ -129,7 +150,11 @@ const Teachers = () => {
     setFormData(initialFormData);
     setIsEditMode(false);
     setErrors({});
+    setPreviewIds(null);
+    setUseAutoIds(true);
     setIsModalOpen(true);
+    // Fetch initial preview IDs
+    fetchPreviewIds();
   };
 
   const handleOpenEditModal = (teacher) => {
@@ -190,7 +215,6 @@ const Teachers = () => {
             zipCode: formData.zipCode,
           },
         },
-        employeeId: formData.employeeId,
         joiningDate: formData.joiningDate,
         designation: formData.designation,
         department: formData.department,
@@ -211,6 +235,11 @@ const Teachers = () => {
         },
         status: formData.status,
       };
+
+      // Only include employee ID if not using auto-generation or if editing
+      if (!useAutoIds || isEditMode) {
+        if (formData.employeeId) teacherData.employeeId = formData.employeeId;
+      }
 
       if (!isEditMode && formData.password) {
         teacherData.user.password = formData.password;
@@ -491,20 +520,66 @@ const Teachers = () => {
 
           {/* Professional Information */}
           <div className="border-t pt-6">
-            <h3 className="text-lg font-semibold mb-4 text-gray-900">Professional Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Employee ID <span className="text-red-500">*</span>
-                </label>
-                <Input
-                  name="employeeId"
-                  value={formData.employeeId}
-                  onChange={handleInputChange}
-                  placeholder="e.g., EMP2024001"
-                />
-                {errors.employeeId && <p className="text-red-500 text-xs mt-1">{errors.employeeId}</p>}
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Professional Information</h3>
+              {!isEditMode && (
+                <div className="flex items-center space-x-2">
+                  <label className="flex items-center text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={useAutoIds}
+                      onChange={(e) => setUseAutoIds(e.target.checked)}
+                      className="mr-2"
+                    />
+                    Auto-generate Employee ID
+                  </label>
+                  {useAutoIds && (
+                    <button
+                      type="button"
+                      onClick={() => fetchPreviewIds()}
+                      className="text-blue-600 hover:text-blue-800 p-1"
+                      title="Refresh preview"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* ID Preview Box */}
+            {!isEditMode && useAutoIds && previewIds && (
+              <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-semibold text-green-900">Auto-Generated Employee ID (Preview)</h4>
+                  {loadingPreview && <span className="text-xs text-green-600">Updating...</span>}
+                </div>
+                <div className="text-sm">
+                  <p className="text-green-700 font-medium">Employee ID</p>
+                  <p className="text-green-900 font-mono text-lg">{previewIds.teacherId}</p>
+                </div>
+                <p className="text-xs text-green-600 mt-2">
+                  ℹ️ This ID will be automatically assigned when you create the teacher
+                </p>
               </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {(!useAutoIds || isEditMode) && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Employee ID {!useAutoIds && <span className="text-red-500">*</span>}
+                  </label>
+                  <Input
+                    name="employeeId"
+                    value={formData.employeeId}
+                    onChange={handleInputChange}
+                    placeholder="e.g., EMP2024001"
+                    disabled={isEditMode}
+                  />
+                  {errors.employeeId && <p className="text-red-500 text-xs mt-1">{errors.employeeId}</p>}
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Joining Date</label>

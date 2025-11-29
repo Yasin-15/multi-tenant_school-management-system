@@ -1,5 +1,6 @@
 import Teacher from '../models/Teacher.js';
 import User from '../models/User.js';
+import { generateTeacherId, getTenantCode } from '../utils/idGenerator.js';
 
 // @desc    Create a new teacher
 // @route   POST /api/teachers
@@ -19,7 +20,7 @@ export const createTeacher = async (req, res) => {
             address
         } = userData;
 
-        const {
+        let {
             employeeId,
             joiningDate,
             designation,
@@ -44,13 +45,22 @@ export const createTeacher = async (req, res) => {
             });
         }
 
-        // Check if teacher employeeId exists
-        const teacherExists = await Teacher.findOne({ employeeId, tenant: tenantId });
-        if (teacherExists) {
-            return res.status(400).json({
-                success: false,
-                message: 'Teacher with this Employee ID already exists'
-            });
+        // Auto-generate employee ID if not provided
+        if (!employeeId) {
+            // Get tenant info for code generation
+            const Tenant = (await import('../models/Tenant.js')).default;
+            const tenant = await Tenant.findById(tenantId);
+            const tenantCode = getTenantCode(tenant);
+            employeeId = await generateTeacherId(tenantId, tenantCode);
+        } else {
+            // Check if provided employee ID already exists
+            const teacherExists = await Teacher.findOne({ employeeId, tenant: tenantId });
+            if (teacherExists) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Teacher with this Employee ID already exists'
+                });
+            }
         }
 
         // Create User

@@ -9,7 +9,8 @@
     "dev": "nodemon server.js",
     "seed": "node scripts/seedData.js",
     "create-tenant": "node scripts/createTenant.js",
-    "create-super-admin": "node scripts/createSuperAdmin.js"
+    "create-super-admin": "node scripts/createSuperAdmin.js",
+    "check-users": "node scripts/checkUsers.js"
   },
   "keywords": [
     "school",
