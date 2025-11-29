@@ -174,7 +174,7 @@ const Login = () => {
                     {/* Footer */}
                     <div className="mt-8 text-center">
                         <p className="text-sm text-gray-500">
-                            © 2024 School Management System. All rights reserved.
+                            © 2025 School Management System. All rights reserved.
                         </p>
                     </div>
                 </div>
