@@ -2,7 +2,8 @@
 
 .sidebar {
   /* Glassmorphism background */
-  background: rgba(255, 255, 255, 0.1);
+  background: #0f172a;
+  /* Dark blue background */
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-right: 1px solid rgba(255, 255, 255, 0.2);
@@ -59,7 +60,7 @@
   top: 1rem;
   left: 1rem;
   z-index: 998;
-  background: rgba(17, 24, 39, 0.9);
+  background: rgba(15, 23, 42, 0.9);
   backdrop-filter: blur(8px);
   color: white;
   border: none;
@@ -74,7 +75,7 @@
 }
 
 .mobile-menu-button:hover {
-  background: rgba(17, 24, 39, 1);
+  background: rgba(15, 23, 42, 1);
   transform: scale(1.05);
 }
 
