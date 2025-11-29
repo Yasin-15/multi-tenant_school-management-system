@@ -154,18 +154,20 @@ const connectDB = async () => {
         const conn = await mongoose.connect(process.env.MONGODB_URI);
         console.log(`MongoDB Connected: ${conn.connection.host}`);
     } catch (error) {
-        console.error(`Error: ${error.message}`);
-        process.exit(1);
+        console.error(`MongoDB Connection Error: ${error.message}`);
+        // Don't exit, keep server running for health checks
+        console.log('Server will continue running without database connection');
     }
 };
 
 // Start server
 const PORT = process.env.PORT || 5000;
 
-connectDB().then(() => {
-    httpServer.listen(PORT, () => {
-        console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
-    });
+// Start server first (important for Render to detect the port)
+httpServer.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+    // Connect to database after server starts
+    connectDB();
 });
 
 // Handle unhandled promise rejections

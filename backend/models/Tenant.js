@@ -99,7 +99,7 @@ const tenantSchema = new mongoose.Schema({
 });
 
 // Index for faster queries
-tenantSchema.index({ subdomain: 1 });
+// subdomain already has unique index from schema definition
 tenantSchema.index({ domain: 1 });
 
 export default mongoose.model('Tenant', tenantSchema);

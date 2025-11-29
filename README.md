@@ -15,6 +15,8 @@ A comprehensive multi-tenant school management system built with MERN stack (Mon
 - **Fee Management**: Create fee structures and track payments
 - **Notifications**: Send multi-language announcements to students, teachers, or specific groups
 - **Reports & Export**: Generate and export comprehensive reports in PDF and Excel formats
+- **Payroll Management**: Generate payrolls, manage payslips, and track salary history
+- **Timetable Management**: Create and manage class schedules with conflict detection
 
 ### Teacher Features
 - View assigned classes and students
@@ -199,6 +201,20 @@ For detailed setup instructions, see [SETUP.md](./docs/SETUP.md)
 - `GET /api/reports/class/:classId/excel` - Download class Excel report
 - `GET /api/reports/subject/:subjectId/report` - Download subject PDF report
 
+### Payroll
+- `POST /api/payroll/generate` - Generate payroll
+- `GET /api/payroll` - Get payroll records
+- `PUT /api/payroll/:id` - Update payroll status
+- `GET /api/payroll/my-payslips` - Get teacher's payslips
+
+### Timetable
+- `GET /api/timetable/:classId` - Get class timetable
+- `PUT /api/timetable/:classId` - Update class timetable
+- `POST /api/timetable/check-conflicts` - Check for scheduling conflicts
+- `GET /api/timetable/teacher/:teacherId/schedule` - Get teacher's schedule
+- `GET /api/timetable/teacher/:teacherId/weekly` - Get teacher's weekly schedule
+- `GET /api/timetable/student/:studentId/weekly` - Get student's weekly schedule
+
 ### Fees
 - `GET /api/fee-structures` - Get fee structures
 - `POST /api/fee-structures` - Create fee structure
@@ -323,8 +339,8 @@ For support, email support@schoolms.com or create an issue in the repository.
 - [ ] Library management
 - [ ] Transport management
 - [ ] Hostel management
-- [ ] Payroll system
-- [ ] Timetable generator
+- [x] Payroll system
+- [x] Timetable generator
 
 ## Acknowledgments
 

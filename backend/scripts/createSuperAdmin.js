@@ -2,16 +2,8 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import User from '../models/User.js';
 import Tenant from '../models/Tenant.js';
-import readline from 'readline';
 
 dotenv.config();
-
-const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-});
-
-const question = (query) => new Promise((resolve) => rl.question(query, resolve));
 
 const createSuperAdmin = async () => {
     try {
@@ -33,21 +25,21 @@ const createSuperAdmin = async () => {
 
         console.log('\n=== Create Super Admin User ===\n');
 
-        const email = await question('Email: ');
-        const password = await question('Password: ');
-        const firstName = await question('First Name: ');
-        const lastName = await question('Last Name: ');
+        // Default credentials
+        const email = 'yasindev54@gmail.com';
+        const password = 'Yaasiin@2026';
+        const firstName = 'Yasin';
+        const lastName = 'Mohamed';
 
         // Check if super admin already exists
         const existingUser = await User.findOne({ email, role: 'super_admin' });
         
         if (existingUser) {
             console.log('\nSuper admin with this email already exists!');
-            rl.close();
             process.exit(0);
         }
 
-        const superAdmin = await User.create({
+        await User.create({
             tenant: systemTenant._id,
             email,
             password,
@@ -64,11 +56,9 @@ const createSuperAdmin = async () => {
         console.log(`Password: ${password}`);
         console.log(`Role: super_admin`);
 
-        rl.close();
         process.exit(0);
     } catch (error) {
         console.error('Error:', error.message);
-        rl.close();
         process.exit(1);
     }
 };
