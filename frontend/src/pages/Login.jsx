@@ -35,13 +35,13 @@ const Login = () => {
     };
 
     return (
-        <div className="min-h-screen flex">
+        <div className="min-h-screen flex flex-col lg:flex-row">
             {/* Left Panel - Branding */}
-            <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 p-12 flex-col justify-between relative overflow-hidden">
+            <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 p-6 md:p-12 flex-col justify-between relative overflow-hidden">
                 {/* Decorative circles */}
                 <div className="absolute top-20 left-20 w-32 h-32 bg-blue-200/30 rounded-full blur-3xl"></div>
                 <div className="absolute bottom-32 right-20 w-40 h-40 bg-purple-200/30 rounded-full blur-3xl"></div>
-                
+
                 <div className="relative z-10">
                     {/* Logo and Title */}
                     <div className="flex items-center gap-3 mb-8">
@@ -56,9 +56,9 @@ const Login = () => {
 
                     {/* Hero Image */}
                     <div className="relative rounded-2xl overflow-hidden shadow-2xl mb-8">
-                        <img 
-                            src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&auto=format&fit=crop&q=80" 
-                            alt="Team collaboration" 
+                        <img
+                            src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&auto=format&fit=crop&q=80"
+                            alt="Team collaboration"
                             className="w-full h-80 object-cover"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
@@ -77,8 +77,8 @@ const Login = () => {
             </div>
 
             {/* Right Panel - Login Form */}
-            <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white">
-                <div className="w-full max-w-md">
+            <div className="w-full lg:w-1/2 flex items-center justify-center p-4 sm:p-6 md:p-8 bg-white">
+                <div className="w-full max-w-md px-2 sm:px-0">
                     {/* Mobile Logo */}
                     <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
                         <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -91,13 +91,13 @@ const Login = () => {
                     </div>
 
                     {/* Welcome Text */}
-                    <div className="mb-8">
-                        <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h2>
-                        <p className="text-gray-600">Please sign in to continue</p>
+                    <div className="mb-6 md:mb-8">
+                        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Welcome Back</h2>
+                        <p className="text-sm sm:text-base text-gray-600">Please sign in to continue</p>
                     </div>
 
                     {/* Login Form */}
-                    <form onSubmit={handleSubmit} className="space-y-5">
+                    <form onSubmit={handleSubmit} className="space-y-4 md:space-y-5">
                         {/* Username Field */}
                         <div>
                             <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">

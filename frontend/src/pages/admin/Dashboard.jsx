@@ -73,10 +73,10 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="p-8">
-      <h1 className="text-3xl font-bold mb-8">Admin Dashboard</h1>
+    <div className="p-4 sm:p-6 lg:p-8">
+      <h1 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8">Admin Dashboard</h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
         <StatCard
           icon={Users}
           title="Total Students"
@@ -104,46 +104,46 @@ const AdminDashboard = () => {
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white rounded-lg shadow p-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-500 text-sm">Paid Invoices</p>
-              <p className="text-2xl font-bold mt-2 text-green-600">{stats.paidInvoices}</p>
+              <p className="text-xl sm:text-2xl font-bold mt-2 text-green-600">{stats.paidInvoices}</p>
             </div>
             <div className="p-3 rounded-full bg-green-100">
-              <CheckCircle className="w-6 h-6 text-green-600" />
+              <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-500 text-sm">Pending Invoices</p>
-              <p className="text-2xl font-bold mt-2 text-yellow-600">{stats.pendingInvoices}</p>
+              <p className="text-xl sm:text-2xl font-bold mt-2 text-yellow-600">{stats.pendingInvoices}</p>
             </div>
             <div className="p-3 rounded-full bg-yellow-100">
-              <AlertCircle className="w-6 h-6 text-yellow-600" />
+              <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-600" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-500 text-sm">Overdue Invoices</p>
-              <p className="text-2xl font-bold mt-2 text-red-600">{stats.overdueInvoices}</p>
+              <p className="text-xl sm:text-2xl font-bold mt-2 text-red-600">{stats.overdueInvoices}</p>
             </div>
             <div className="p-3 rounded-full bg-red-100">
-              <AlertCircle className="w-6 h-6 text-red-600" />
+              <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" />
             </div>
           </div>
         </div>
       </div>
 
       {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
         <PerformanceChart
           type="bar"
           title="Revenue Overview"
@@ -166,39 +166,39 @@ const AdminDashboard = () => {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">Payment Summary</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+          <h2 className="text-lg sm:text-xl font-semibold mb-4">Payment Summary</h2>
           <div className="space-y-3">
             <div className="flex justify-between items-center p-3 bg-green-50 rounded">
-              <span className="text-gray-700">Total Collected</span>
-              <span className="font-bold text-green-600">${stats.revenue.toLocaleString()}</span>
+              <span className="text-sm sm:text-base text-gray-700">Total Collected</span>
+              <span className="text-sm sm:text-base font-bold text-green-600">${stats.revenue.toLocaleString()}</span>
             </div>
             <div className="flex justify-between items-center p-3 bg-yellow-50 rounded">
-              <span className="text-gray-700">Pending Collection</span>
-              <span className="font-bold text-yellow-600">${stats.pendingAmount.toLocaleString()}</span>
+              <span className="text-sm sm:text-base text-gray-700">Pending Collection</span>
+              <span className="text-sm sm:text-base font-bold text-yellow-600">${stats.pendingAmount.toLocaleString()}</span>
             </div>
             <div className="flex justify-between items-center p-3 bg-blue-50 rounded">
-              <span className="text-gray-700">Expected Total</span>
-              <span className="font-bold text-blue-600">${(stats.revenue + stats.pendingAmount).toLocaleString()}</span>
+              <span className="text-sm sm:text-base text-gray-700">Expected Total</span>
+              <span className="text-sm sm:text-base font-bold text-blue-600">${(stats.revenue + stats.pendingAmount).toLocaleString()}</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+          <h2 className="text-lg sm:text-xl font-semibold mb-4">Quick Actions</h2>
           <div className="space-y-2">
             <a href="/admin/fees" className="block p-3 bg-blue-50 hover:bg-blue-100 rounded transition">
-              <p className="font-medium text-blue-700">Manage Fee Payments</p>
-              <p className="text-sm text-gray-600">View and record student payments</p>
+              <p className="text-sm sm:text-base font-medium text-blue-700">Manage Fee Payments</p>
+              <p className="text-xs sm:text-sm text-gray-600">View and record student payments</p>
             </a>
             <a href="/admin/students" className="block p-3 bg-green-50 hover:bg-green-100 rounded transition">
-              <p className="font-medium text-green-700">Manage Students</p>
-              <p className="text-sm text-gray-600">Add or edit student information</p>
+              <p className="text-sm sm:text-base font-medium text-green-700">Manage Students</p>
+              <p className="text-xs sm:text-sm text-gray-600">Add or edit student information</p>
             </a>
             <a href="/admin/classes" className="block p-3 bg-purple-50 hover:bg-purple-100 rounded transition">
-              <p className="font-medium text-purple-700">Manage Classes</p>
-              <p className="text-sm text-gray-600">View and organize classes</p>
+              <p className="text-sm sm:text-base font-medium text-purple-700">Manage Classes</p>
+              <p className="text-xs sm:text-sm text-gray-600">View and organize classes</p>
             </a>
           </div>
         </div>

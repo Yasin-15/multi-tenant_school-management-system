@@ -29,7 +29,7 @@ The School Management System is a production-ready, multi-tenant application des
 - 🏢 **Multi-Tenancy**: Support multiple schools with isolated data
 - 🔐 **Secure Authentication**: JWT-based authentication with role-based access control
 - 📊 **Comprehensive Dashboard**: Real-time analytics and insights
-- 📱 **Responsive Design**: Works seamlessly on desktop, tablet, and mobile
+- 📱 **Responsive Design**: Fully optimized for mobile, tablet, and desktop - [View Responsive Design Guide](./RESPONSIVE_DESIGN.md)
 - 🌐 **Internationalization**: Multi-language support for notifications
 - ⚡ **Real-time Updates**: Socket.IO integration for instant notifications
 - 📄 **Report Generation**: PDF and Excel export capabilities
