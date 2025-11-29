@@ -38,7 +38,7 @@ export const createTenant = async (req, res) => {
 
         // Create Admin User for this Tenant
         if (adminUser) {
-            await User.create({
+            const user = await User.create({
                 tenant: tenant._id,
                 firstName: adminUser.firstName,
                 lastName: adminUser.lastName,
@@ -48,6 +48,10 @@ export const createTenant = async (req, res) => {
                 phone: contactPhone,
                 address
             });
+
+            // Update tenant with admin user
+            tenant.admin = user._id;
+            await tenant.save();
         }
 
         res.status(201).json({
@@ -69,7 +73,9 @@ export const createTenant = async (req, res) => {
 // @access  Private (Super Admin)
 export const getTenants = async (req, res) => {
     try {
-        const tenants = await Tenant.find().sort({ createdAt: -1 });
+        const tenants = await Tenant.find()
+            .populate('admin', 'firstName lastName email')
+            .sort({ createdAt: -1 });
 
         res.status(200).json({
             success: true,
@@ -99,7 +105,8 @@ export const getTenantById = async (req, res) => {
             });
         }
 
-        const tenant = await Tenant.findById(req.params.id);
+        const tenant = await Tenant.findById(req.params.id)
+            .populate('admin', 'firstName lastName email');
 
         if (!tenant) {
             return res.status(404).json({
