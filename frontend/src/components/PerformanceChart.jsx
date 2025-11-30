@@ -81,9 +81,9 @@ const PerformanceChart = ({ type = 'bar', data, title, xKey, yKey, dataKey }) =>
     };
 
     return (
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-96">
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">{title}</h3>
-            <div className="h-80">
+            <div style={{ width: '100%', height: '320px' }}>
                 {renderChart()}
             </div>
         </div>
