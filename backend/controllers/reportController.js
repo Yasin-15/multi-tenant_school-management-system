@@ -150,6 +150,7 @@ export const generateStudentReportCard = async (req, res) => {
  */
 export const generateClassExcelReport = async (req, res) => {
     try {
+        console.log('[generateClassExcelReport] Request received');
         const { classId } = req.params;
         const { subject, examType, academicYear } = req.query;
 
@@ -176,24 +177,51 @@ export const generateClassExcelReport = async (req, res) => {
         if (academicYear) query.academicYear = academicYear;
 
         // Fetch grades
-        const grades = await Grade.find(query)
+        let grades = await Grade.find(query)
             .populate({
                 path: 'student',
                 populate: { path: 'user', select: 'firstName lastName' }
             })
-            .populate('subject')
-            .sort({ 'student.rollNumber': 1, examDate: -1 });
+            .populate('subject');
 
-        if (grades.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'No grades found for this class'
-            });
-        }
+        // Filter out grades with missing student or subject data
+        grades = grades.filter(g => g.student && g.student.user && g.subject);
+
+        // Sort in memory since we can't sort by populated field in Mongoose find
+        grades.sort((a, b) => {
+            const rollA = a.student.rollNumber || '';
+            const rollB = b.student.rollNumber || '';
+            // Compare roll numbers (numeric or string)
+            if (rollA !== rollB) {
+                return rollA < rollB ? -1 : 1;
+            }
+            // Secondary sort by exam date
+            return new Date(b.examDate) - new Date(a.examDate);
+        });
 
         // Create Excel workbook
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('Class Grades Report');
+
+        // Add title section
+        worksheet.mergeCells('A1:K1');
+        const titleCell = worksheet.getCell('A1');
+        titleCell.value = 'CLASS GRADES REPORT';
+        titleCell.font = { size: 18, bold: true, color: { argb: 'FFFFFFFF' } };
+        titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2E75B6' } };
+        titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        worksheet.getRow(1).height = 30;
+
+        // Add class info
+        worksheet.mergeCells('A2:K2');
+        const infoCell = worksheet.getCell('A2');
+        infoCell.value = `Class: ${classData.name} | Academic Year: ${academicYear || 'All Years'}`;
+        infoCell.font = { size: 12, bold: true };
+        infoCell.alignment = { horizontal: 'center' };
+        worksheet.getRow(2).height = 20;
+
+        // Add empty row for spacing
+        worksheet.addRow([]);
 
         // Set column widths
         worksheet.columns = [
@@ -210,53 +238,138 @@ export const generateClassExcelReport = async (req, res) => {
             { header: 'Remarks', key: 'remarks', width: 25 }
         ];
 
-        // Style header row
-        worksheet.getRow(1).font = { bold: true };
-        worksheet.getRow(1).fill = {
+        // Style header row (row 4)
+        const headerRow = worksheet.getRow(4);
+        headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+        headerRow.fill = {
             type: 'pattern',
             pattern: 'solid',
             fgColor: { argb: 'FF4472C4' }
         };
-        worksheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
+        headerRow.height = 25;
 
-        // Add data rows
-        grades.forEach((grade) => {
-            worksheet.addRow({
-                rollNumber: grade.student.rollNumber,
-                studentName: `${grade.student.user.firstName} ${grade.student.user.lastName}`,
-                subject: grade.subject.name,
-                examType: grade.examType,
-                examName: grade.examName,
-                examDate: new Date(grade.examDate).toLocaleDateString(),
+        // Add borders to header
+        headerRow.eachCell((cell) => {
+            cell.border = {
+                top: { style: 'thin' },
+                left: { style: 'thin' },
+                bottom: { style: 'thin' },
+                right: { style: 'thin' }
+            };
+        });
+
+        // Add data rows with alternating colors
+        let rowIndex = 5;
+        grades.forEach((grade, index) => {
+            // Safe access to properties
+            const rollNumber = grade.student?.rollNumber || 'N/A';
+            const firstName = grade.student?.user?.firstName || '';
+            const lastName = grade.student?.user?.lastName || '';
+            const studentName = `${firstName} ${lastName}`.trim() || 'Unknown';
+            const subjectName = grade.subject?.name || 'Unknown';
+            const percentageVal = grade.percentage !== undefined ? grade.percentage : 0;
+
+            const row = worksheet.addRow({
+                rollNumber: rollNumber,
+                studentName: studentName,
+                subject: subjectName,
+                examType: grade.examType || '',
+                examName: grade.examName || '',
+                examDate: grade.examDate ? new Date(grade.examDate).toLocaleDateString() : '',
                 totalMarks: grade.totalMarks,
                 obtainedMarks: grade.obtainedMarks,
-                percentage: grade.percentage.toFixed(2),
-                grade: grade.grade,
+                percentage: percentageVal.toFixed(2),
+                grade: grade.grade || '',
                 remarks: grade.remarks || ''
             });
+
+            // Alternating row colors
+            if (index % 2 === 0) {
+                row.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFF2F2F2' }
+                };
+            }
+
+            // Add borders
+            row.eachCell((cell) => {
+                cell.border = {
+                    top: { style: 'thin', color: { argb: 'FFD3D3D3' } },
+                    left: { style: 'thin', color: { argb: 'FFD3D3D3' } },
+                    bottom: { style: 'thin', color: { argb: 'FFD3D3D3' } },
+                    right: { style: 'thin', color: { argb: 'FFD3D3D3' } }
+                };
+            });
+
+            // Color code percentage cells
+            const percentageCell = row.getCell(9);
+            if (percentageVal >= 90) {
+                percentageCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF92D050' } }; // Green
+            } else if (percentageVal >= 75) {
+                percentageCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFEB9C' } }; // Yellow
+            } else if (percentageVal >= 60) {
+                percentageCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFC000' } }; // Orange
+            } else {
+                percentageCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF6B6B' } }; // Red
+            }
+
+            rowIndex++;
         });
 
-        // Add summary statistics
-        worksheet.addRow({});
-        const summaryRow = worksheet.addRow({
-            rollNumber: 'SUMMARY',
-            studentName: '',
-            subject: '',
-            examType: '',
-            examName: '',
-            examDate: '',
-            totalMarks: '',
-            obtainedMarks: '',
-            percentage: (grades.reduce((sum, g) => sum + g.percentage, 0) / grades.length).toFixed(2),
-            grade: 'Avg',
-            remarks: ''
+        // Add spacing before summary
+        worksheet.addRow([]);
+        worksheet.addRow([]);
+
+        // Calculate summary statistics
+        const totalPercentage = grades.length > 0 ? grades.reduce((sum, g) => sum + (g.percentage || 0), 0) : 0;
+        const avgPercentage = grades.length > 0 ? (totalPercentage / grades.length).toFixed(2) : '0.00';
+        const highestPercentage = grades.length > 0 ? Math.max(...grades.map(g => g.percentage || 0)).toFixed(2) : '0.00';
+        const lowestPercentage = grades.length > 0 ? Math.min(...grades.map(g => g.percentage || 0)).toFixed(2) : '0.00';
+
+        // Calculate unique students safely
+        const uniqueStudents = new Set(grades.map(g => g.student?._id?.toString()).filter(Boolean)).size;
+
+        const passRate = grades.length > 0 ? ((grades.filter(g => (g.percentage || 0) >= 40).length / grades.length) * 100).toFixed(2) : '0.00';
+
+        // Add summary section
+        const summaryStartRow = rowIndex + 2;
+        worksheet.mergeCells(`A${summaryStartRow}:K${summaryStartRow}`);
+        const summaryTitleCell = worksheet.getCell(`A${summaryStartRow}`);
+        summaryTitleCell.value = 'SUMMARY STATISTICS';
+        summaryTitleCell.font = { size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
+        summaryTitleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF70AD47' } };
+        summaryTitleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        worksheet.getRow(summaryStartRow).height = 25;
+
+        // Add summary data
+        const summaryData = [
+            ['Total Students:', uniqueStudents, '', 'Total Exams:', grades.length],
+            ['Average Percentage:', `${avgPercentage}%`, '', 'Highest Score:', `${highestPercentage}%`],
+            ['Lowest Score:', `${lowestPercentage}%`, '', 'Pass Rate:', `${passRate}%`]
+        ];
+
+        summaryData.forEach((data, index) => {
+            const row = worksheet.addRow(data);
+            row.font = { bold: true };
+            row.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFE2EFDA' }
+            };
+            row.eachCell((cell, colNumber) => {
+                if (colNumber === 1 || colNumber === 4) {
+                    cell.font = { bold: true, color: { argb: 'FF375623' } };
+                }
+                cell.border = {
+                    top: { style: 'thin' },
+                    left: { style: 'thin' },
+                    bottom: { style: 'thin' },
+                    right: { style: 'thin' }
+                };
+            });
         });
-        summaryRow.font = { bold: true };
-        summaryRow.fill = {
-            type: 'pattern',
-            pattern: 'solid',
-            fgColor: { argb: 'FFFFEB9C' }
-        };
 
         // Set response headers
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -415,6 +528,11 @@ export const generateSubjectReport = async (req, res) => {
  */
 export const generateClassPDFReport = async (req, res) => {
     try {
+        console.log('[generateClassPDFReport] Request received');
+        console.log('[generateClassPDFReport] Params:', req.params);
+        console.log('[generateClassPDFReport] Query:', req.query);
+        console.log('[generateClassPDFReport] Tenant:', req.tenant?._id);
+
         const { classId } = req.params;
         const { academicYear } = req.query;
 
@@ -592,29 +710,66 @@ export const generateStudentExcelReport = async (req, res) => {
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('Student Performance');
 
-        // Add student info section
-        worksheet.mergeCells('A1:D1');
-        worksheet.getCell('A1').value = 'STUDENT PERFORMANCE REPORT';
-        worksheet.getCell('A1').font = { size: 16, bold: true };
-        worksheet.getCell('A1').alignment = { horizontal: 'center' };
+        // Add title section
+        worksheet.mergeCells('A1:I1');
+        const titleCell = worksheet.getCell('A1');
+        titleCell.value = 'STUDENT PERFORMANCE REPORT';
+        titleCell.font = { size: 18, bold: true, color: { argb: 'FFFFFFFF' } };
+        titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2E75B6' } };
+        titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        worksheet.getRow(1).height = 30;
 
-        worksheet.getCell('A3').value = 'Name:';
-        worksheet.getCell('B3').value = `${student.user.firstName} ${student.user.lastName}`;
-        worksheet.getCell('A4').value = 'Roll Number:';
-        worksheet.getCell('B4').value = student.rollNumber;
-        worksheet.getCell('A5').value = 'Class:';
-        worksheet.getCell('B5').value = student.class.name;
-        worksheet.getCell('A6').value = 'Email:';
-        worksheet.getCell('B6').value = student.user.email;
+        // Add empty row for spacing
+        worksheet.addRow([]);
 
-        // Style info section
-        ['A3', 'A4', 'A5', 'A6'].forEach(cell => {
-            worksheet.getCell(cell).font = { bold: true };
+        // Add student info section with styling
+        const infoStyle = {
+            font: { bold: true, size: 11 },
+            fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE7E6E6' } },
+            border: {
+                top: { style: 'thin' },
+                left: { style: 'thin' },
+                bottom: { style: 'thin' },
+                right: { style: 'thin' }
+            }
+        };
+
+        const infoData = [
+            ['Name:', `${student.user.firstName} ${student.user.lastName}`, '', 'Roll Number:', student.rollNumber],
+            ['Class:', student.class.name, '', 'Email:', student.user.email],
+            ['Academic Year:', academicYear || 'All Years', '', 'Total Exams:', grades.length]
+        ];
+
+        infoData.forEach((data, index) => {
+            const row = worksheet.addRow(data);
+            row.eachCell((cell, colNumber) => {
+                if (colNumber === 1 || colNumber === 4) {
+                    cell.font = { bold: true, color: { argb: 'FF375623' } };
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9E1F2' } };
+                } else {
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2F2F2' } };
+                }
+                cell.border = {
+                    top: { style: 'thin' },
+                    left: { style: 'thin' },
+                    bottom: { style: 'thin' },
+                    right: { style: 'thin' }
+                };
+            });
         });
 
-        // Add grades table
-        worksheet.getCell('A8').value = 'DETAILED GRADES';
-        worksheet.getCell('A8').font = { size: 14, bold: true };
+        // Add spacing
+        worksheet.addRow([]);
+        worksheet.addRow([]);
+
+        // Add grades table header
+        worksheet.mergeCells('A8:I8');
+        const gradesHeaderCell = worksheet.getCell('A8');
+        gradesHeaderCell.value = 'DETAILED GRADES';
+        gradesHeaderCell.font = { size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
+        gradesHeaderCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF70AD47' } };
+        gradesHeaderCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        worksheet.getRow(8).height = 25;
 
         // Set column widths
         worksheet.columns = [
@@ -632,17 +787,26 @@ export const generateStudentExcelReport = async (req, res) => {
         // Add headers at row 10
         const headerRow = worksheet.getRow(10);
         headerRow.values = ['Subject', 'Exam Type', 'Exam Name', 'Date', 'Total Marks', 'Obtained Marks', 'Percentage', 'Grade', 'Remarks'];
-        headerRow.font = { bold: true };
+        headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
         headerRow.fill = {
             type: 'pattern',
             pattern: 'solid',
             fgColor: { argb: 'FF4472C4' }
         };
-        headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
+        headerRow.height = 25;
+        headerRow.eachCell((cell) => {
+            cell.border = {
+                top: { style: 'thin' },
+                left: { style: 'thin' },
+                bottom: { style: 'thin' },
+                right: { style: 'thin' }
+            };
+        });
 
-        // Add data rows
+        // Add data rows with alternating colors
         let rowNum = 11;
-        grades.forEach((grade) => {
+        grades.forEach((grade, index) => {
             const row = worksheet.getRow(rowNum);
             row.values = [
                 grade.subject.name,
@@ -655,20 +819,119 @@ export const generateStudentExcelReport = async (req, res) => {
                 grade.grade,
                 grade.remarks || ''
             ];
+
+            // Alternating row colors
+            if (index % 2 === 0) {
+                row.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFF2F2F2' }
+                };
+            }
+
+            // Add borders
+            row.eachCell((cell) => {
+                cell.border = {
+                    top: { style: 'thin', color: { argb: 'FFD3D3D3' } },
+                    left: { style: 'thin', color: { argb: 'FFD3D3D3' } },
+                    bottom: { style: 'thin', color: { argb: 'FFD3D3D3' } },
+                    right: { style: 'thin', color: { argb: 'FFD3D3D3' } }
+                };
+            });
+
+            // Color code percentage cells
+            const percentageCell = row.getCell(7);
+            const percentage = parseFloat(grade.percentage);
+            if (percentage >= 90) {
+                percentageCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF92D050' } }; // Green
+            } else if (percentage >= 75) {
+                percentageCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFEB9C' } }; // Yellow
+            } else if (percentage >= 60) {
+                percentageCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFC000' } }; // Orange
+            } else {
+                percentageCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF6B6B' } }; // Red
+            }
+
             rowNum++;
         });
 
-        // Add summary
-        const summaryRow = worksheet.getRow(rowNum + 1);
-        summaryRow.values = ['SUMMARY', '', '', '', '', '',
-            (grades.reduce((sum, g) => sum + g.percentage, 0) / grades.length).toFixed(2),
-            'Average', ''];
-        summaryRow.font = { bold: true };
-        summaryRow.fill = {
-            type: 'pattern',
-            pattern: 'solid',
-            fgColor: { argb: 'FFFFEB9C' }
-        };
+        // Add spacing before summary
+        worksheet.addRow([]);
+        worksheet.addRow([]);
+
+        // Calculate summary statistics
+        const totalPercentage = grades.reduce((sum, g) => sum + g.percentage, 0);
+        const avgPercentage = (totalPercentage / grades.length).toFixed(2);
+        const highestPercentage = Math.max(...grades.map(g => g.percentage)).toFixed(2);
+        const lowestPercentage = Math.min(...grades.map(g => g.percentage)).toFixed(2);
+
+        // Group by subject for subject-wise average
+        const subjectStats = {};
+        grades.forEach(grade => {
+            const subjectName = grade.subject.name;
+            if (!subjectStats[subjectName]) {
+                subjectStats[subjectName] = { total: 0, count: 0 };
+            }
+            subjectStats[subjectName].total += grade.percentage;
+            subjectStats[subjectName].count += 1;
+        });
+
+        // Add summary section
+        const summaryStartRow = rowNum + 2;
+        worksheet.mergeCells(`A${summaryStartRow}:I${summaryStartRow}`);
+        const summaryTitleCell = worksheet.getCell(`A${summaryStartRow}`);
+        summaryTitleCell.value = 'PERFORMANCE SUMMARY';
+        summaryTitleCell.font = { size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
+        summaryTitleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF6B6B' } };
+        summaryTitleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        worksheet.getRow(summaryStartRow).height = 25;
+
+        // Add summary data
+        const summaryData = [
+            ['Overall Average:', `${avgPercentage}%`, '', 'Highest Score:', `${highestPercentage}%`],
+            ['Lowest Score:', `${lowestPercentage}%`, '', 'Total Exams:', grades.length],
+            ['Pass Rate:', `${((grades.filter(g => g.percentage >= 40).length / grades.length) * 100).toFixed(2)}%`, '', 'Failed Exams:', grades.filter(g => g.percentage < 40).length]
+        ];
+
+        summaryData.forEach((data) => {
+            const row = worksheet.addRow(data);
+            row.font = { bold: true };
+            row.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFFCE4D6' }
+            };
+            row.eachCell((cell, colNumber) => {
+                if (colNumber === 1 || colNumber === 4) {
+                    cell.font = { bold: true, color: { argb: 'FF833C0C' } };
+                }
+                cell.border = {
+                    top: { style: 'thin' },
+                    left: { style: 'thin' },
+                    bottom: { style: 'thin' },
+                    right: { style: 'thin' }
+                };
+            });
+        });
+
+        // Add subject-wise summary
+        worksheet.addRow([]);
+        const subjectSummaryRow = worksheet.addRow(['SUBJECT-WISE AVERAGE']);
+        subjectSummaryRow.font = { bold: true, size: 12 };
+        subjectSummaryRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9E1F2' } };
+
+        Object.keys(subjectStats).forEach(subjectName => {
+            const avg = (subjectStats[subjectName].total / subjectStats[subjectName].count).toFixed(2);
+            const row = worksheet.addRow([subjectName, `${avg}%`, '', `Exams: ${subjectStats[subjectName].count}`]);
+            row.eachCell((cell) => {
+                cell.border = {
+                    top: { style: 'thin' },
+                    left: { style: 'thin' },
+                    bottom: { style: 'thin' },
+                    right: { style: 'thin' }
+                };
+            });
+        });
 
         // Set response headers
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');

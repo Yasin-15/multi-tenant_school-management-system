@@ -11,6 +11,7 @@ const Reports = () => {
     const [activeTab, setActiveTab] = useState('financial');
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
+    const [examType, setExamType] = useState('');
 
     // Data states
     const [classes, setClasses] = useState([]);
@@ -21,7 +22,7 @@ const Reports = () => {
     const [selectedClass, setSelectedClass] = useState('');
     const [selectedStudent, setSelectedStudent] = useState('');
     const [selectedSubject, setSelectedSubject] = useState('');
-    const [academicYear, setAcademicYear] = useState(new Date().getFullYear().toString());
+    const [academicYear, setAcademicYear] = useState('');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
 
@@ -31,6 +32,7 @@ const Reports = () => {
         else if (path.includes('attendance')) setActiveTab('attendance');
         else if (path.includes('academic')) setActiveTab('academic');
         else if (path.includes('batch')) setActiveTab('batch');
+        else if (path.includes('grades')) setActiveTab('grades');
 
         fetchInitialData();
     }, [location]);
@@ -285,13 +287,13 @@ const Reports = () => {
                             className="w-full p-2 border border-gray-300 rounded-md"
                             value={academicYear}
                             onChange={(e) => setAcademicYear(e.target.value)}
-                            placeholder="e.g. 2024-2025"
+                            placeholder="e.g. 2025 or 2025-2026 (Leave empty for all)"
                         />
                     </div>
                     <div className="flex gap-2">
                         <button
                             onClick={() => handleDownload(
-                                () => reportService.downloadClassPDF(selectedClass, academicYear),
+                                () => reportService.downloadClassPDF(selectedClass, { academicYear }),
                                 `class-report.pdf`
                             )}
                             disabled={!selectedClass || loading}
@@ -399,7 +401,7 @@ const Reports = () => {
                             className="w-full p-2 border border-gray-300 rounded-md"
                             value={academicYear}
                             onChange={(e) => setAcademicYear(e.target.value)}
-                            placeholder="e.g. 2024-2025"
+                            placeholder="e.g. 2025 or 2025-2026 (Leave empty for all)"
                         />
                     </div>
                     <button
@@ -455,6 +457,233 @@ const Reports = () => {
         </div>
     );
 
+    const renderGradeReports = () => (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Student Grade Report */}
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                <div className="flex items-center mb-4">
+                    <div className="p-2 bg-pink-100 rounded-lg mr-3">
+                        <FileText className="w-6 h-6 text-pink-600" />
+                    </div>
+                    <h3 className="text-lg font-semibold">Student Grade Report</h3>
+                </div>
+                <p className="text-gray-500 text-sm mb-4">Detailed grade report for a specific student with enhanced formatting.</p>
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Select Class</label>
+                        <select
+                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-pink-500 focus:border-pink-500"
+                            value={selectedClass}
+                            onChange={(e) => setSelectedClass(e.target.value)}
+                        >
+                            <option value="">-- Select Class --</option>
+                            {classes.map((cls) => (
+                                <option key={cls._id} value={cls._id}>{cls.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Select Student</label>
+                        <select
+                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-pink-500 focus:border-pink-500"
+                            value={selectedStudent}
+                            onChange={(e) => setSelectedStudent(e.target.value)}
+                            disabled={!selectedClass}
+                        >
+                            <option value="">-- Select Student --</option>
+                            {students.map((std) => (
+                                <option key={std._id} value={std._id}>
+                                    {std.user?.firstName} {std.user?.lastName} ({std.rollNumber})
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Academic Year (Optional)</label>
+                        <input
+                            type="text"
+                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-pink-500 focus:border-pink-500"
+                            value={academicYear}
+                            onChange={(e) => setAcademicYear(e.target.value)}
+                            placeholder="e.g. 2025 or 2025-2026 (Leave empty for all)"
+                        />
+                    </div>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => handleDownload(
+                                () => reportService.downloadStudentReportCard(selectedStudent, academicYear),
+                                `student-grade-report-${selectedStudent}.pdf`
+                            )}
+                            disabled={!selectedStudent || loading}
+                            className="flex-1 flex items-center justify-center px-4 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                        >
+                            <FileText className="w-4 h-4 mr-2" />
+                            PDF
+                        </button>
+                        <button
+                            onClick={() => handleDownload(
+                                () => reportService.downloadStudentExcel(selectedStudent, academicYear),
+                                `student-grade-report-${selectedStudent}.xlsx`
+                            )}
+                            disabled={!selectedStudent || loading}
+                            className="flex-1 flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                        >
+                            <Download className="w-4 h-4 mr-2" />
+                            Excel
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Class Grade Report */}
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                <div className="flex items-center mb-4">
+                    <div className="p-2 bg-indigo-100 rounded-lg mr-3">
+                        <Users className="w-6 h-6 text-indigo-600" />
+                    </div>
+                    <h3 className="text-lg font-semibold">Class Grade Report</h3>
+                </div>
+                <p className="text-gray-500 text-sm mb-4">Comprehensive grade report for entire class with color-coded performance.</p>
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Select Class</label>
+                        <select
+                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                            value={selectedClass}
+                            onChange={(e) => setSelectedClass(e.target.value)}
+                        >
+                            <option value="">-- Select Class --</option>
+                            {classes.map((cls) => (
+                                <option key={cls._id} value={cls._id}>{cls.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Subject (Optional)</label>
+                        <select
+                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                            value={selectedSubject}
+                            onChange={(e) => setSelectedSubject(e.target.value)}
+                        >
+                            <option value="">All Subjects</option>
+                            {subjects.map((subj) => (
+                                <option key={subj._id} value={subj._id}>{subj.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Exam Type (Optional)</label>
+                        <select
+                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                            value={examType}
+                            onChange={(e) => setExamType(e.target.value)}
+                        >
+                            <option value="">All Types</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="chapter">Chapter</option>
+                            <option value="midterm">Midterm</option>
+                            <option value="final">Final</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Academic Year (Optional)</label>
+                        <input
+                            type="text"
+                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                            value={academicYear}
+                            onChange={(e) => setAcademicYear(e.target.value)}
+                            placeholder="e.g. 2025 or 2025-2026 (Leave empty for all)"
+                        />
+                    </div>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => handleDownload(
+                                () => reportService.downloadClassPDF(selectedClass, { academicYear }),
+                                `class-grade-report-${selectedClass}.pdf`
+                            )}
+                            disabled={!selectedClass || loading}
+                            className="flex-1 flex items-center justify-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                        >
+                            <FileText className="w-4 h-4 mr-2" />
+                            PDF
+                        </button>
+                        <button
+                            onClick={() => handleDownload(
+                                () => reportService.downloadClassExcel(selectedClass, { subject: selectedSubject, examType, academicYear }),
+                                `class-grade-report-${selectedClass}.xlsx`
+                            )}
+                            disabled={!selectedClass || loading}
+                            className="flex-1 flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                        >
+                            <Download className="w-4 h-4 mr-2" />
+                            Excel
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Subject Grade Report */}
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                <div className="flex items-center mb-4">
+                    <div className="p-2 bg-cyan-100 rounded-lg mr-3">
+                        <BookOpen className="w-6 h-6 text-cyan-600" />
+                    </div>
+                    <h3 className="text-lg font-semibold">Subject Grade Report</h3>
+                </div>
+                <p className="text-gray-500 text-sm mb-4">Performance analysis for a specific subject across classes.</p>
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Select Subject</label>
+                        <select
+                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-cyan-500 focus:border-cyan-500"
+                            value={selectedSubject}
+                            onChange={(e) => setSelectedSubject(e.target.value)}
+                        >
+                            <option value="">-- Select Subject --</option>
+                            {subjects.map((subj) => (
+                                <option key={subj._id} value={subj._id}>{subj.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Class (Optional)</label>
+                        <select
+                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-cyan-500 focus:border-cyan-500"
+                            value={selectedClass}
+                            onChange={(e) => setSelectedClass(e.target.value)}
+                        >
+                            <option value="">All Classes</option>
+                            {classes.map((cls) => (
+                                <option key={cls._id} value={cls._id}>{cls.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Academic Year (Optional)</label>
+                        <input
+                            type="text"
+                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-cyan-500 focus:border-cyan-500"
+                            value={academicYear}
+                            onChange={(e) => setAcademicYear(e.target.value)}
+                            placeholder="e.g. 2025 or 2025-2026 (Leave empty for all)"
+                        />
+                    </div>
+                    <button
+                        onClick={() => handleDownload(
+                            () => reportService.downloadSubjectReport(selectedSubject, { classId: selectedClass, academicYear }),
+                            `subject-grade-report-${selectedSubject}.pdf`
+                        )}
+                        disabled={!selectedSubject || loading}
+                        className="w-full flex items-center justify-center px-4 py-2 bg-cyan-600 text-white rounded-md hover:bg-cyan-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                    >
+                        <Download className="w-4 h-4 mr-2" />
+                        Download PDF Report
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+
     // Helper icon component since GraduationCap is not imported in the main list
     const GraduationCapIcon = ({ className }) => (
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M22 10v6M2 10l10-5 10 5-10 5z" /><path d="M6 12v5c3 3 9 3 12 0v-5" /></svg>
@@ -469,10 +698,11 @@ const Reports = () => {
                         {activeTab === 'attendance' && 'Attendance Reports'}
                         {activeTab === 'academic' && 'Academic Reports'}
                         {activeTab === 'batch' && 'Batch Operations'}
+                        {activeTab === 'grades' && 'Grade Reports'}
                     </h1>
                     <p className="text-gray-500 mt-1">Generate and download detailed reports</p>
                 </div>
-                <div className="flex space-x-2">
+                <div className="flex flex-wrap gap-2">
                     <button
                         onClick={() => setActiveTab('financial')}
                         className={`px-4 py-2 rounded-md ${activeTab === 'financial' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}
@@ -492,6 +722,12 @@ const Reports = () => {
                         Academic
                     </button>
                     <button
+                        onClick={() => setActiveTab('grades')}
+                        className={`px-4 py-2 rounded-md ${activeTab === 'grades' ? 'bg-pink-100 text-pink-700' : 'bg-gray-100 text-gray-600'}`}
+                    >
+                        Grades
+                    </button>
+                    <button
                         onClick={() => setActiveTab('batch')}
                         className={`px-4 py-2 rounded-md ${activeTab === 'batch' ? 'bg-teal-100 text-teal-700' : 'bg-gray-100 text-gray-600'}`}
                     >
@@ -509,6 +745,7 @@ const Reports = () => {
             {activeTab === 'financial' && renderFinancialReports()}
             {activeTab === 'attendance' && renderAttendanceReports()}
             {activeTab === 'academic' && renderAcademicReports()}
+            {activeTab === 'grades' && renderGradeReports()}
             {activeTab === 'batch' && renderBatchReports()}
         </div>
     );

@@ -24,10 +24,9 @@ export const reportService = {
   },
 
   // Class reports
-  downloadClassPDF: async (classId, academicYear) => {
-    const params = academicYear ? { academicYear } : {};
+  downloadClassPDF: async (classId, filters = {}) => {
     const response = await api.get(`/reports/class/${classId}/pdf`, {
-      params,
+      params: filters,
       responseType: 'blob',
     });
     return response.data;

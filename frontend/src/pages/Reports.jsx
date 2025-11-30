@@ -17,7 +17,7 @@ const Reports = () => {
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
   const [selectedStudent, setSelectedStudent] = useState('');
-  const [academicYear, setAcademicYear] = useState('');
+  const [academicYear, setAcademicYear] = useState(new Date().getFullYear().toString());
   const [examType, setExamType] = useState('');
 
   useEffect(() => {
@@ -191,7 +191,7 @@ const Reports = () => {
       {/* Report Type Selection */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <h2 className="text-xl font-semibold mb-4">Select Report Type</h2>
-        <div className="flex gap-4">
+        <div className="flex flex-wrap gap-4">
           <button
             onClick={() => setReportType('student')}
             className={`px-6 py-3 rounded-lg font-medium transition ${
@@ -223,12 +223,21 @@ const Reports = () => {
             Subject Report
           </button>
         </div>
+        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-sm text-blue-800">
+            <strong>Enhanced Excel Reports:</strong> All Excel reports now include color-coded performance indicators, 
+            detailed summaries, and professional formatting for better analysis.
+          </p>
+        </div>
       </div>
 
       {/* Student Report */}
       {reportType === 'student' && (
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-xl font-semibold mb-4">Student Performance Report</h2>
+          <p className="text-gray-600 mb-4">
+            Generate comprehensive grade reports with color-coded performance indicators, subject-wise analysis, and detailed summaries.
+          </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -275,10 +284,20 @@ const Reports = () => {
                 type="text"
                 value={academicYear}
                 onChange={(e) => setAcademicYear(e.target.value)}
-                placeholder="e.g., 2023-2024"
+                placeholder="e.g., 2024-2025"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+          </div>
+
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg mb-4">
+            <h3 className="font-semibold text-sm text-gray-700 mb-2">Excel Report Features:</h3>
+            <ul className="text-sm text-gray-600 space-y-1">
+              <li>✓ Color-coded performance (Green: 90%+, Yellow: 75-89%, Orange: 60-74%, Red: Below 60%)</li>
+              <li>✓ Subject-wise average calculations</li>
+              <li>✓ Overall performance summary with pass rate</li>
+              <li>✓ Professional formatting with borders and spacing</li>
+            </ul>
           </div>
 
           <div className="flex gap-4">
@@ -294,7 +313,7 @@ const Reports = () => {
               disabled={loading || !selectedStudent}
               className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition"
             >
-              {loading ? 'Generating...' : 'Download Excel Report'}
+              {loading ? 'Generating...' : 'Download Enhanced Excel Report'}
             </button>
           </div>
         </div>
@@ -304,6 +323,9 @@ const Reports = () => {
       {reportType === 'class' && (
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-xl font-semibold mb-4">Class Performance Report</h2>
+          <p className="text-gray-600 mb-4">
+            Generate class-wide grade reports with alternating row colors, performance statistics, and comprehensive summaries.
+          </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -353,6 +375,8 @@ const Reports = () => {
                 <option value="">All Types</option>
                 <option value="monthly">Monthly</option>
                 <option value="chapter">Chapter</option>
+                <option value="midterm">Midterm</option>
+                <option value="final">Final</option>
               </select>
             </div>
 
@@ -364,10 +388,21 @@ const Reports = () => {
                 type="text"
                 value={academicYear}
                 onChange={(e) => setAcademicYear(e.target.value)}
-                placeholder="e.g., 2023-2024"
+                placeholder="e.g., 2024-2025"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+          </div>
+
+          <div className="bg-gradient-to-r from-green-50 to-teal-50 p-4 rounded-lg mb-4">
+            <h3 className="font-semibold text-sm text-gray-700 mb-2">Excel Report Includes:</h3>
+            <ul className="text-sm text-gray-600 space-y-1">
+              <li>✓ Professional header with class and academic year information</li>
+              <li>✓ Alternating row colors for easy reading</li>
+              <li>✓ Color-coded percentage cells based on performance</li>
+              <li>✓ Summary statistics: Average, Highest, Lowest scores, Pass rate</li>
+              <li>✓ Total students and exam count</li>
+            </ul>
           </div>
 
           <div className="flex gap-4">
@@ -383,7 +418,7 @@ const Reports = () => {
               disabled={loading || !selectedClass}
               className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition"
             >
-              {loading ? 'Generating...' : 'Download Excel Report'}
+              {loading ? 'Generating...' : 'Download Enhanced Excel Report'}
             </button>
           </div>
         </div>

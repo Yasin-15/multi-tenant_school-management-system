@@ -16,7 +16,13 @@ import { tenantMiddleware } from '../middleware/tenant.js';
 
 const router = express.Router();
 
+console.log('[Report Routes] Loading report routes...');
+
 // All routes require tenant identification and authentication
+router.use((req, res, next) => {
+    console.log('[Report Routes] Incoming request:', req.method, req.path);
+    next();
+});
 router.use(tenantMiddleware);
 router.use(protect);
 
@@ -26,10 +32,17 @@ router.get('/student/:studentId/excel', authorize('admin', 'teacher', 'student',
 router.get('/student/:studentId/attendance', authorize('admin', 'teacher', 'student', 'parent'), generateStudentAttendanceReport);
 router.get('/student/:studentId/fee', authorize('admin', 'student', 'parent'), generateStudentFeeReport);
 
+// Test route
+router.get('/test', (req, res) => {
+    res.json({ success: true, message: 'Report routes are working!' });
+});
+
 // Class reports
 router.get('/class/:classId/pdf', authorize('admin', 'teacher'), generateClassPDFReport);
 router.get('/class/:classId/excel', authorize('admin', 'teacher'), generateClassExcelReport);
 router.get('/class/:classId/fee', authorize('admin'), generateClassFeeReport);
+
+console.log('[Report Routes] Class report routes registered');
 
 // Subject reports
 router.get('/subject/:subjectId/report', authorize('admin', 'teacher'), generateSubjectReport);

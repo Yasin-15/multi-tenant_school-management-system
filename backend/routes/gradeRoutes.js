@@ -6,7 +6,9 @@ import {
     createGrade,
     updateGrade,
     deleteGrade,
-    getClassGradesReport
+    getClassGradesReport,
+    bulkCreateGrades,
+    exportGrades
 } from '../controllers/gradeController.js';
 import { protect, authorize } from '../middleware/auth.js';
 import { tenantMiddleware } from '../middleware/tenant.js';
@@ -16,6 +18,9 @@ const router = express.Router();
 // All routes require tenant identification and authentication
 router.use(tenantMiddleware);
 router.use(protect);
+
+// Export grades (admin, teacher)
+router.get('/export', authorize('admin', 'teacher'), exportGrades);
 
 // Get all grades (admin, teacher)
 router.get('/', authorize('admin', 'teacher'), getGrades);
@@ -28,6 +33,9 @@ router.get('/class/:classId/report', authorize('admin', 'teacher'), getClassGrad
 
 // Get single grade
 router.get('/:id', getGrade);
+
+// Bulk create grades (admin, teacher)
+router.post('/bulk', authorize('admin', 'teacher'), bulkCreateGrades);
 
 // Create grade (admin, teacher)
 router.post('/', authorize('admin', 'teacher'), createGrade);

@@ -425,3 +425,213 @@ export const getClassGradesReport = async (req, res) => {
         });
     }
 };
+
+/**
+ * @desc    Bulk create grades
+ * @route   POST /api/grades/bulk
+ * @access  Private (Admin, Teacher)
+ */
+export const bulkCreateGrades = async (req, res) => {
+    try {
+        const { grades } = req.body;
+
+        if (!grades || !Array.isArray(grades) || grades.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Grades array is required'
+            });
+        }
+
+        const results = {
+            success: [],
+            failed: []
+        };
+
+        for (const gradeData of grades) {
+            try {
+                const {
+                    student, class: classId, subject, examType, examName,
+                    examDate, month, chapterName, chapterNumber,
+                    totalMarks, obtainedMarks, remarks, academicYear
+                } = gradeData;
+
+                // Validate required fields
+                if (!student || !classId || !subject || !examType || !examName || 
+                    !examDate || !totalMarks || obtainedMarks === undefined || !academicYear) {
+                    results.failed.push({
+                        data: gradeData,
+                        error: 'Missing required fields'
+                    });
+                    continue;
+                }
+
+                // Validate marks
+                if (obtainedMarks > totalMarks) {
+                    results.failed.push({
+                        data: gradeData,
+                        error: 'Obtained marks cannot exceed total marks'
+                    });
+                    continue;
+                }
+
+                // Verify student exists
+                const studentExists = await Student.findOne({
+                    _id: student,
+                    tenant: req.tenant._id
+                });
+
+                if (!studentExists) {
+                    results.failed.push({
+                        data: gradeData,
+                        error: 'Student not found'
+                    });
+                    continue;
+                }
+
+                // Create grade
+                const grade = await Grade.create({
+                    tenant: req.tenant._id,
+                    student,
+                    class: classId,
+                    subject,
+                    examType,
+                    examName,
+                    examDate,
+                    month,
+                    chapterName,
+                    chapterNumber,
+                    totalMarks,
+                    obtainedMarks,
+                    remarks,
+                    academicYear,
+                    enteredBy: req.user._id
+                });
+
+                results.success.push(grade);
+            } catch (error) {
+                results.failed.push({
+                    data: gradeData,
+                    error: error.message
+                });
+            }
+        }
+
+        res.status(201).json({
+            success: true,
+            message: `Successfully created ${results.success.length} grades, ${results.failed.length} failed`,
+            data: {
+                created: results.success.length,
+                failed: results.failed.length,
+                successfulGrades: results.success,
+                failedGrades: results.failed
+            }
+        });
+    } catch (error) {
+        console.error('Bulk create grades error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error creating grades in bulk',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * @desc    Export grades to CSV (returns JSON with CSV data)
+ * @route   GET /api/grades/export
+ * @access  Private (Admin, Teacher)
+ */
+export const exportGrades = async (req, res) => {
+    try {
+        const { class: classId, subject, examType, academicYear } = req.query;
+
+        console.log('Export grades request:', { classId, subject, examType, academicYear, tenant: req.tenant?._id });
+
+        const query = { tenant: req.tenant._id };
+
+        if (classId) query.class = classId;
+        if (subject) query.subject = subject;
+        if (examType) query.examType = examType;
+        if (academicYear) query.academicYear = academicYear;
+
+        console.log('Export query:', query);
+
+        const grades = await Grade.find(query)
+            .populate({
+                path: 'student',
+                populate: { path: 'user', select: 'firstName lastName' }
+            })
+            .populate('class', 'name section')
+            .populate('subject', 'name')
+            .sort({ examDate: -1 });
+
+        console.log('Found grades for export:', grades.length);
+
+        // Create CSV headers
+        const csvHeaders = [
+            'Student Name',
+            'Class',
+            'Subject',
+            'Exam Type',
+            'Exam Name',
+            'Exam Date',
+            'Total Marks',
+            'Obtained Marks',
+            'Percentage',
+            'Grade',
+            'Remarks'
+        ];
+
+        // Create CSV rows
+        const csvRows = grades.map(grade => {
+            const studentName = grade.student?.user 
+                ? `${grade.student.user.firstName || ''} ${grade.student.user.lastName || ''}`.trim()
+                : 'N/A';
+            const className = grade.class 
+                ? `${grade.class.name || ''} - ${grade.class.section || ''}`.trim()
+                : 'N/A';
+            const subjectName = grade.subject?.name || 'N/A';
+            const examDate = grade.examDate 
+                ? new Date(grade.examDate).toLocaleDateString('en-US')
+                : '';
+            
+            return [
+                studentName,
+                className,
+                subjectName,
+                grade.examType || '',
+                grade.examName || '',
+                examDate,
+                grade.totalMarks || '',
+                grade.obtainedMarks || '',
+                grade.percentage ? `${grade.percentage}` : '',
+                grade.grade || '',
+                (grade.remarks || '').replace(/"/g, '""') // Escape quotes in remarks
+            ];
+        });
+
+        // Build CSV content
+        const csvContent = [
+            csvHeaders.join(','),
+            ...csvRows.map(row => row.map(cell => `"${cell}"`).join(','))
+        ].join('\n');
+
+        console.log('CSV content generated, length:', csvContent.length);
+
+        // Return as JSON with CSV content
+        res.status(200).json({
+            success: true,
+            data: csvContent,
+            filename: `grades-export-${Date.now()}.csv`
+        });
+    } catch (error) {
+        console.error('Export grades error:', error);
+        console.error('Error stack:', error.stack);
+        
+        res.status(500).json({
+            success: false,
+            message: 'Error exporting grades',
+            error: error.message
+        });
+    }
+};

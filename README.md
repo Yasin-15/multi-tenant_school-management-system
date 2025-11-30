@@ -1092,10 +1092,10 @@ We welcome contributions! Please follow these steps:
 - [x] Online exam system
 - [x] Dashboard analytics
 - [x] Super admin features
+- [x] Email report delivery
+- [x] Advanced analytics & insights
 
 ### In Progress
-- [ ] Email report delivery
-- [ ] Advanced analytics & insights
 - [ ] Mobile app (React Native)
 
 ### Planned Features

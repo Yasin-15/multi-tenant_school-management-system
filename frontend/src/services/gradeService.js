@@ -6,6 +6,11 @@ export const gradeService = {
     return response.data;
   },
 
+  bulkCreate: async (grades) => {
+    const response = await api.post('/grades/bulk', { grades });
+    return response.data;
+  },
+
   getAll: async (params) => {
     const response = await api.get('/grades', { params });
     return response.data;
@@ -25,6 +30,11 @@ export const gradeService = {
 
   getClassReport: async (classId, params) => {
     const response = await api.get(`/grades/class/${classId}/report`, { params });
+    return response.data;
+  },
+
+  export: async (params) => {
+    const response = await api.get('/grades/export', { params });
     return response.data;
   },
 
