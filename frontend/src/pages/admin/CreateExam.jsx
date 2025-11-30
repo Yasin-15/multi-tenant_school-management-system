@@ -13,6 +13,7 @@ const CreateExam = () => {
 
     const [formData, setFormData] = useState({
         title: '',
+        examType: 'Chapter Exam',
         class: '',
         subject: '',
         duration: 60,
@@ -111,6 +112,21 @@ const CreateExam = () => {
                                 value={formData.title}
                                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                             />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Exam Type *</label>
+                            <select
+                                required
+                                className="w-full p-2 border rounded-lg"
+                                value={formData.examType}
+                                onChange={(e) => setFormData({ ...formData, examType: e.target.value })}
+                            >
+                                <option value="Chapter Exam">Chapter Exam</option>
+                                <option value="Midterm">Midterm</option>
+                                <option value="Final">Final</option>
+                                <option value="Quiz">Quiz</option>
+                            </select>
                         </div>
 
                         <div>

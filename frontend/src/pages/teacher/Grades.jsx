@@ -59,7 +59,7 @@ const TeacherGrades = () => {
     try {
       const response = await studentService.getAll({ class: selectedClass });
       setStudents(response.data || []);
-      
+
       const initialGrades = {};
       response.data.forEach(student => {
         initialGrades[student._id] = {
@@ -106,7 +106,7 @@ const TeacherGrades = () => {
       return;
     }
 
-    if (examType === 'chapter' && !chapterName) {
+    if ((examType === 'chapter' || examType === 'Chapter Exam') && !chapterName) {
       alert('Please enter chapter name for chapter exam');
       return;
     }
@@ -142,7 +142,7 @@ const TeacherGrades = () => {
           gradeData.month = month;
         }
 
-        if (examType === 'chapter') {
+        if (examType === 'chapter' || examType === 'Chapter Exam') {
           gradeData.chapterName = chapterName;
           if (chapterNumber) {
             gradeData.chapterNumber = parseInt(chapterNumber);
@@ -153,7 +153,7 @@ const TeacherGrades = () => {
       }
 
       alert(`Grades saved successfully for ${studentsWithGrades.length} students!`);
-      
+
       // Reset form
       setGrades({});
       setExamName('');
@@ -220,8 +220,11 @@ const TeacherGrades = () => {
               className="w-full px-3 py-2 border rounded-md"
             >
               <option value="">Select Type</option>
+              <option value="Midterm">Midterm</option>
+              <option value="Final">Final</option>
+              <option value="Chapter Exam">Chapter Exam</option>
+              <option value="Quiz">Quiz</option>
               <option value="monthly">Monthly Exam</option>
-              <option value="chapter">Chapter Exam</option>
             </select>
           </div>
         </div>
@@ -284,7 +287,7 @@ const TeacherGrades = () => {
           </div>
         )}
 
-        {examType === 'chapter' && (
+        {(examType === 'chapter' || examType === 'Chapter Exam') && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <div>
               <label className="block text-sm font-medium mb-2">Chapter Name *</label>
@@ -309,8 +312,8 @@ const TeacherGrades = () => {
         )}
 
         <div className="flex justify-end">
-          <Button 
-            onClick={handleSaveGrades} 
+          <Button
+            onClick={handleSaveGrades}
             disabled={!selectedClass || !selectedSubject || !examType || saving}
             className="px-6"
           >
@@ -339,7 +342,7 @@ const TeacherGrades = () => {
                 {students.map((student) => {
                   const marks = grades[student._id]?.marksObtained;
                   const grade = marks ? calculateGrade(parseInt(marks), parseInt(totalMarks)) : '-';
-                  
+
                   return (
                     <tr key={student._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -367,13 +370,12 @@ const TeacherGrades = () => {
                         />
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`px-3 py-1 text-xs rounded-full font-semibold ${
-                          grade === 'A+' || grade === 'A' ? 'bg-green-100 text-green-800' :
-                          grade === 'B' || grade === 'C' ? 'bg-blue-100 text-blue-800' :
-                          grade === 'D' ? 'bg-yellow-100 text-yellow-800' :
-                          grade === 'F' ? 'bg-red-100 text-red-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
+                        <span className={`px-3 py-1 text-xs rounded-full font-semibold ${grade === 'A+' || grade === 'A' ? 'bg-green-100 text-green-800' :
+                            grade === 'B' || grade === 'C' ? 'bg-blue-100 text-blue-800' :
+                              grade === 'D' ? 'bg-yellow-100 text-yellow-800' :
+                                grade === 'F' ? 'bg-red-100 text-red-800' :
+                                  'bg-gray-100 text-gray-800'
+                          }`}>
                           {grade}
                         </span>
                       </td>

@@ -4,10 +4,10 @@ import ExamResult from '../models/ExamResult.js';
 // Create a new exam
 export const createExam = async (req, res) => {
     try {
-        const { title, subject, class: classId, duration, startTime, endTime, questions } = req.body;
+        const { title, examType, subject, class: classId, duration, startTime, endTime, questions } = req.body;
 
         // Basic validation
-        if (!title || !subject || !classId || !duration || !startTime || !endTime) {
+        if (!title || !examType || !subject || !classId || !duration || !startTime || !endTime) {
             return res.status(400).json({ message: 'Missing required fields' });
         }
 
@@ -15,6 +15,7 @@ export const createExam = async (req, res) => {
             tenant: req.user.tenant,
             teacher: req.user.userId, // Assuming teacher creates it
             title,
+            examType,
             subject,
             class: classId,
             duration,

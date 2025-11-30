@@ -14,12 +14,13 @@ const Students = () => {
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedClass, setSelectedClass] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
-  
+
   const initialFormData = {
     firstName: '',
     lastName: '',
@@ -55,7 +56,7 @@ const Students = () => {
 
   useEffect(() => {
     let isMounted = true;
-    
+
     const loadData = async () => {
       if (!isMounted) return;
       await Promise.all([
@@ -63,9 +64,9 @@ const Students = () => {
         fetchClasses()
       ]);
     };
-    
+
     loadData();
-    
+
     return () => {
       isMounted = false;
     };
@@ -94,7 +95,7 @@ const Students = () => {
 
   const fetchPreviewIds = async (classId = null, section = null) => {
     if (!useAutoIds) return;
-    
+
     setLoadingPreview(true);
     try {
       const response = await utilityService.previewNextIds(classId, section);
@@ -113,10 +114,10 @@ const Students = () => {
     if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
     if (!formData.email.trim()) newErrors.email = 'Email is required';
     else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Email is invalid';
-    
+
     if (!isEditMode && !formData.password) newErrors.password = 'Password is required';
     else if (!isEditMode && formData.password.length < 6) newErrors.password = 'Password must be at least 6 characters';
-    
+
     // Only require manual IDs if auto-generation is disabled
     if (!useAutoIds && !isEditMode) {
       if (!formData.studentId.trim()) newErrors.studentId = 'Student ID is required';
@@ -193,7 +194,7 @@ const Students = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -270,11 +271,13 @@ const Students = () => {
     setIsViewModalOpen(true);
   };
 
-  const filteredStudents = students.filter((student) =>
-    `${student.user?.firstName} ${student.user?.lastName} ${student.studentId}`
+  const filteredStudents = students.filter((student) => {
+    const matchesSearch = `${student.user?.firstName} ${student.user?.lastName} ${student.studentId}`
       .toLowerCase()
-      .includes(searchTerm.toLowerCase())
-  );
+      .includes(searchTerm.toLowerCase());
+    const matchesClass = selectedClass ? student.class?._id === selectedClass : true;
+    return matchesSearch && matchesClass;
+  });
 
   if (loading) {
     return <div className="flex items-center justify-center h-full">Loading...</div>;
@@ -294,16 +297,28 @@ const Students = () => {
       </div>
 
       <div className="bg-white rounded-lg shadow mb-6">
-        <div className="p-4 border-b">
-          <div className="relative">
+        <div className="p-4 border-b flex items-center gap-4">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <Input
               type="text"
               placeholder="Search by name or student ID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-10 w-full"
             />
+          </div>
+          <div className="w-64">
+            <select
+              className="w-full p-2 border rounded-lg text-sm"
+              value={selectedClass}
+              onChange={(e) => setSelectedClass(e.target.value)}
+            >
+              <option value="">All Classes</option>
+              {classes.map(c => (
+                <option key={c._id} value={c._id}>{c.name} - {c.section}</option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -349,12 +364,11 @@ const Students = () => {
                     {student.rollNumber || '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 text-xs rounded-full capitalize ${
-                      student.status === 'active' ? 'bg-green-100 text-green-800' :
+                    <span className={`px-2 py-1 text-xs rounded-full capitalize ${student.status === 'active' ? 'bg-green-100 text-green-800' :
                       student.status === 'inactive' ? 'bg-gray-100 text-gray-800' :
-                      student.status === 'graduated' ? 'bg-blue-100 text-blue-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
+                        student.status === 'graduated' ? 'bg-blue-100 text-blue-800' :
+                          'bg-red-100 text-red-800'
+                      }`}>
                       {student.status}
                     </span>
                   </td>
@@ -397,7 +411,7 @@ const Students = () => {
       </div>
 
       {/* Add/Edit Student Modal */}
-      <Modal
+      < Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={isEditMode ? 'Edit Student' : 'Add New Student'}
@@ -819,10 +833,10 @@ const Students = () => {
             </Button>
           </div>
         </form>
-      </Modal>
+      </Modal >
 
       {/* View Student Details Modal */}
-      <Modal
+      < Modal
         isOpen={isViewModalOpen}
         onClose={() => setIsViewModalOpen(false)}
         title="Student Details"
@@ -840,12 +854,11 @@ const Students = () => {
                   {selectedStudent.user?.firstName} {selectedStudent.user?.lastName}
                 </h3>
                 <p className="text-gray-600">{selectedStudent.studentId}</p>
-                <span className={`inline-block px-3 py-1 text-xs rounded-full mt-2 capitalize ${
-                  selectedStudent.status === 'active' ? 'bg-green-100 text-green-800' :
+                <span className={`inline-block px-3 py-1 text-xs rounded-full mt-2 capitalize ${selectedStudent.status === 'active' ? 'bg-green-100 text-green-800' :
                   selectedStudent.status === 'inactive' ? 'bg-gray-100 text-gray-800' :
-                  selectedStudent.status === 'graduated' ? 'bg-blue-100 text-blue-800' :
-                  'bg-red-100 text-red-800'
-                }`}>
+                    selectedStudent.status === 'graduated' ? 'bg-blue-100 text-blue-800' :
+                      'bg-red-100 text-red-800'
+                  }`}>
                   {selectedStudent.status}
                 </span>
               </div>
@@ -866,8 +879,8 @@ const Students = () => {
                 <div>
                   <p className="text-sm text-gray-500">Date of Birth</p>
                   <p className="font-medium">
-                    {selectedStudent.user?.dateOfBirth 
-                      ? new Date(selectedStudent.user.dateOfBirth).toLocaleDateString() 
+                    {selectedStudent.user?.dateOfBirth
+                      ? new Date(selectedStudent.user.dateOfBirth).toLocaleDateString()
                       : 'N/A'}
                   </p>
                 </div>
@@ -893,16 +906,16 @@ const Students = () => {
                 <div>
                   <p className="text-sm text-gray-500">Admission Date</p>
                   <p className="font-medium">
-                    {selectedStudent.admissionDate 
-                      ? new Date(selectedStudent.admissionDate).toLocaleDateString() 
+                    {selectedStudent.admissionDate
+                      ? new Date(selectedStudent.admissionDate).toLocaleDateString()
                       : 'N/A'}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Class</p>
                   <p className="font-medium">
-                    {selectedStudent.class 
-                      ? `${selectedStudent.class.name} - ${selectedStudent.class.section}` 
+                    {selectedStudent.class
+                      ? `${selectedStudent.class.name} - ${selectedStudent.class.section}`
                       : 'N/A'}
                   </p>
                 </div>
@@ -990,8 +1003,8 @@ const Students = () => {
             </div>
           </div>
         )}
-      </Modal>
-    </div>
+      </Modal >
+    </div >
   );
 };
 

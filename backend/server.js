@@ -31,6 +31,7 @@ import examRoutes from './routes/examRoutes.js';
 import payrollRoutes from './routes/payrollRoutes.js';
 import timetableRoutes from './routes/timetableRoutes.js';
 import utilityRoutes from './routes/utilityRoutes.js';
+import promotionRoutes from './routes/promotionRoutes.js';
 
 const app = express();
 const httpServer = createServer(app);
@@ -48,7 +49,7 @@ const corsOptions = {
     origin: (origin, callback) => {
         // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
-        
+
         if (allowedOrigins.some(allowed => origin.startsWith(allowed))) {
             callback(null, true);
         } else {
@@ -118,6 +119,7 @@ app.use('/api/exams', examRoutes);
 app.use('/api/payroll', payrollRoutes);
 app.use('/api/timetable', timetableRoutes);
 app.use('/api/utilities', utilityRoutes);
+app.use('/api/promotions', promotionRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

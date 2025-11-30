@@ -45,6 +45,8 @@ const Sidebar = () => {
     { path: '/admin/payroll', icon: DollarSign, label: 'Payroll' },
     { path: '/admin/timetable', icon: Calendar, label: 'Timetable' },
     { path: '/admin/exams', icon: ClipboardList, label: 'Exams' },
+    { path: '/admin/exams/results', icon: BarChart, label: 'Exam Results' },
+    { path: '/admin/promote', icon: GraduationCap, label: 'Promote Students' },
     {
       label: 'Reports',
       icon: ClipboardList,

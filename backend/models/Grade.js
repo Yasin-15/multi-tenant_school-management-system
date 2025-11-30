@@ -25,7 +25,7 @@ const gradeSchema = new mongoose.Schema({
     },
     examType: {
         type: String,
-        enum: ['monthly', 'chapter'],
+        enum: ['monthly', 'chapter', 'Midterm', 'Final', 'Chapter Exam', 'Quiz'],
         required: true
     },
     examName: {
@@ -38,8 +38,8 @@ const gradeSchema = new mongoose.Schema({
     },
     month: {
         type: String,
-        enum: ['January', 'February', 'March', 'April', 'May', 'June', 
-               'July', 'August', 'September', 'October', 'November', 'December']
+        enum: ['January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December']
     },
     chapterName: {
         type: String
@@ -79,10 +79,10 @@ const gradeSchema = new mongoose.Schema({
 });
 
 // Calculate percentage and grade before saving
-gradeSchema.pre('save', function(next) {
+gradeSchema.pre('save', function (next) {
     if (this.obtainedMarks && this.totalMarks) {
         this.percentage = (this.obtainedMarks / this.totalMarks) * 100;
-        
+
         // Calculate grade based on percentage
         if (this.percentage >= 90) this.grade = 'A+';
         else if (this.percentage >= 80) this.grade = 'A';

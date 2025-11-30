@@ -17,6 +17,11 @@ const examSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    examType: {
+        type: String,
+        enum: ['Midterm', 'Final', 'Chapter Exam', 'Quiz'],
+        required: true
+    },
     subject: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Subject',
