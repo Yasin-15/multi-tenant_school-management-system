@@ -42,6 +42,7 @@ const StudentDashboard = () => {
 
       // Fetch student profile
       const studentRes = await studentService.getProfile();
+      const studentData = studentRes.data;
 
       // Fetch recent grades
       const gradesRes = await gradeService.getMyGrades({ limit: 5 });
@@ -65,9 +66,34 @@ const StudentDashboard = () => {
         avgGrade = `${(totalPercentage / grades.length).toFixed(1)}%`;
       }
 
+      // Fetch attendance statistics for current month
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+      let attendancePercentage = '0%';
+      try {
+        const attendanceStats = await attendanceService.getStats({
+          studentId: studentData._id,
+          startDate: startOfMonth.toISOString().split('T')[0],
+          endDate: endOfMonth.toISOString().split('T')[0]
+        });
+
+        if (attendanceStats.success && attendanceStats.data) {
+          attendancePercentage = `${attendanceStats.data.attendancePercentage}%`;
+        }
+      } catch (error) {
+        console.error('Error fetching attendance stats:', error);
+        // Continue with default 0% if attendance fetch fails
+      }
+
+      // Get total classes from all grades (subjects the student is enrolled in)
+      const uniqueSubjects = new Set(grades.map(grade => grade.subject?._id).filter(Boolean));
+      const totalClasses = uniqueSubjects.size || 0;
+
       setStats({
-        attendance: '85%', // This should come from attendance service
-        totalClasses: 6,
+        attendance: attendancePercentage,
+        totalClasses: totalClasses,
         averageGrade: avgGrade,
         pendingFees: 0,
       });
@@ -132,8 +158,8 @@ const StudentDashboard = () => {
                   <div className="text-right">
                     <p className="text-lg font-bold">{grade.marksObtained}/{grade.totalMarks}</p>
                     <span className={`px-2 py-1 text-xs rounded-full ${grade.grade === 'A+' || grade.grade === 'A' ? 'bg-green-100 text-green-800' :
-                        grade.grade === 'B' || grade.grade === 'C' ? 'bg-blue-100 text-blue-800' :
-                          'bg-yellow-100 text-yellow-800'
+                      grade.grade === 'B' || grade.grade === 'C' ? 'bg-blue-100 text-blue-800' :
+                        'bg-yellow-100 text-yellow-800'
                       }`}>
                       {grade.grade}
                     </span>
