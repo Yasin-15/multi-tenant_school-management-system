@@ -38,9 +38,9 @@ const TeacherAttendance = () => {
   const fetchStudents = async () => {
     setLoading(true);
     try {
-      const response = await studentService.getAll({ class: selectedClass });
+      const response = await studentService.getAll({ class: selectedClass, limit: 1000 });
       setStudents(response.data || []);
-      
+
       const initialAttendance = {};
       response.data.forEach(student => {
         initialAttendance[student._id] = {
@@ -144,8 +144,8 @@ const TeacherAttendance = () => {
           </div>
 
           <div className="flex items-end">
-            <Button 
-              onClick={handleSaveAttendance} 
+            <Button
+              onClick={handleSaveAttendance}
               disabled={!selectedClass || saving}
               className="w-full"
             >
@@ -196,31 +196,28 @@ const TeacherAttendance = () => {
                       <div className="flex space-x-2">
                         <button
                           onClick={() => handleAttendanceChange(student._id, 'status', 'present')}
-                          className={`px-3 py-1 text-xs rounded-full ${
-                            attendance[student._id]?.status === 'present'
+                          className={`px-3 py-1 text-xs rounded-full ${attendance[student._id]?.status === 'present'
                               ? 'bg-green-500 text-white'
                               : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                          }`}
+                            }`}
                         >
                           Present
                         </button>
                         <button
                           onClick={() => handleAttendanceChange(student._id, 'status', 'absent')}
-                          className={`px-3 py-1 text-xs rounded-full ${
-                            attendance[student._id]?.status === 'absent'
+                          className={`px-3 py-1 text-xs rounded-full ${attendance[student._id]?.status === 'absent'
                               ? 'bg-red-500 text-white'
                               : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                          }`}
+                            }`}
                         >
                           Absent
                         </button>
                         <button
                           onClick={() => handleAttendanceChange(student._id, 'status', 'late')}
-                          className={`px-3 py-1 text-xs rounded-full ${
-                            attendance[student._id]?.status === 'late'
+                          className={`px-3 py-1 text-xs rounded-full ${attendance[student._id]?.status === 'late'
                               ? 'bg-yellow-500 text-white'
                               : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                          }`}
+                            }`}
                         >
                           Late
                         </button>

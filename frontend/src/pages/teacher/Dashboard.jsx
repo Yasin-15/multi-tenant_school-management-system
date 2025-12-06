@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Users, BookOpen, Calendar, ClipboardCheck } from 'lucide-react';
-import { teacherService } from '../../services/teacherService';
 import { classService } from '../../services/classService';
-import { attendanceService } from '../../services/attendanceService';
+import { studentService } from '../../services/studentService';
 
 const StatCard = ({ icon: Icon, title, value, color }) => (
   <div className="bg-white rounded-lg shadow p-6">
@@ -34,14 +33,16 @@ const TeacherDashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      const [classesRes] = await Promise.all([
+      const [classesRes, studentsRes] = await Promise.all([
         classService.getAll(),
+        studentService.getAll({ limit: 1000 })
       ]);
 
       const myClasses = classesRes.data || [];
       setClasses(myClasses);
 
-      const totalStudents = myClasses.reduce((sum, cls) => sum + (cls.students?.length || 0), 0);
+      // Count total students
+      const totalStudents = studentsRes.data?.length || 0;
 
       setStats({
         myClasses: myClasses.length,
@@ -67,7 +68,7 @@ const TeacherDashboard = () => {
   return (
     <div className="p-8">
       <h1 className="text-3xl font-bold mb-8">Teacher Dashboard</h1>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard
           icon={BookOpen}
