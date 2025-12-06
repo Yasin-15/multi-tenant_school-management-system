@@ -57,7 +57,7 @@ const TeacherGrades = () => {
   const fetchStudents = async () => {
     setLoading(true);
     try {
-      const response = await studentService.getAll({ class: selectedClass });
+      const response = await studentService.getAll({ class: selectedClass, limit: 1000 });
       setStudents(response.data || []);
 
       const initialGrades = {};
@@ -371,10 +371,10 @@ const TeacherGrades = () => {
                       </td>
                       <td className="px-6 py-4">
                         <span className={`px-3 py-1 text-xs rounded-full font-semibold ${grade === 'A+' || grade === 'A' ? 'bg-green-100 text-green-800' :
-                            grade === 'B' || grade === 'C' ? 'bg-blue-100 text-blue-800' :
-                              grade === 'D' ? 'bg-yellow-100 text-yellow-800' :
-                                grade === 'F' ? 'bg-red-100 text-red-800' :
-                                  'bg-gray-100 text-gray-800'
+                          grade === 'B' || grade === 'C' ? 'bg-blue-100 text-blue-800' :
+                            grade === 'D' ? 'bg-yellow-100 text-yellow-800' :
+                              grade === 'F' ? 'bg-red-100 text-red-800' :
+                                'bg-gray-100 text-gray-800'
                           }`}>
                           {grade}
                         </span>
