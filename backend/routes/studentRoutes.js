@@ -44,11 +44,13 @@ router.route('/')
     .get(authorize('admin', 'teacher'), getStudents)
     .post(authorize('admin'), createStudent);
 
-// Import students from Excel
+// Import students from Excel - MUST come before /:id route
 router.post('/import', authorize('admin'), upload.single('file'), importStudentsFromExcel);
 
+// Student profile - MUST come before /:id route
 router.get('/my-profile', authorize('student'), getStudent);
 
+// Student-specific routes - parameterized routes must come AFTER specific routes
 router.route('/:id')
     .get(getStudent)
     .put(authorize('admin'), updateStudent)

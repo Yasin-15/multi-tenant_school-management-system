@@ -2,6 +2,8 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
+console.log('[API] Using API_URL:', API_URL);
+
 const api = axios.create({
   baseURL: API_URL,
   headers: {
@@ -16,7 +18,7 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
+
     // Add tenant ID from user data
     const user = localStorage.getItem('user');
     if (user) {
@@ -24,10 +26,10 @@ api.interceptors.request.use(
         const userData = JSON.parse(user);
         if (userData.tenant) {
           // Handle both string ID and object with _id
-          const tenantId = typeof userData.tenant === 'string' 
-            ? userData.tenant 
+          const tenantId = typeof userData.tenant === 'string'
+            ? userData.tenant
             : userData.tenant._id;
-          
+
           if (tenantId) {
             config.headers['X-Tenant-ID'] = tenantId;
           }
@@ -36,7 +38,7 @@ api.interceptors.request.use(
         console.error('[API] Error parsing user data:', error);
       }
     }
-    
+
     return config;
   },
   (error) => Promise.reject(error)
