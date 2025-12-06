@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
-import { User, Lock, Bell, Globe, Save } from 'lucide-react';
+import { User, Lock, Bell, Globe, Save, Building } from 'lucide-react';
 import settingsService from '../services/settingsService';
+import tenantService from '../services/tenantService';
 
 const Settings = () => {
   const { t, i18n } = useTranslation();
   const user = useSelector((state) => state.auth.user);
-  
+
   const [activeTab, setActiveTab] = useState('profile');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
@@ -50,6 +51,18 @@ const Settings = () => {
     }
   });
 
+  const [schoolSettings, setSchoolSettings] = useState({
+    name: '',
+    subdomain: '',
+    logo: '',
+    language: 'en',
+    theme: {
+      primaryColor: '#3b82f6',
+      secondaryColor: '#1e40af',
+      accentColor: '#60a5fa'
+    }
+  });
+
   useEffect(() => {
     if (user) {
       setProfile({
@@ -63,6 +76,12 @@ const Settings = () => {
     fetchSettings();
   }, [user]);
 
+  useEffect(() => {
+    if (activeTab === 'school' && user?.role === 'admin') {
+      fetchSchoolSettings();
+    }
+  }, [activeTab, user]);
+
   const fetchSettings = async () => {
     try {
       const data = await settingsService.getSettings();
@@ -74,6 +93,27 @@ const Settings = () => {
       i18n.changeLanguage(data.language || 'en');
     } catch (error) {
       console.error('Error fetching settings:', error);
+    }
+  };
+
+  const fetchSchoolSettings = async () => {
+    try {
+      const tenantId = user.tenant?._id || user.tenant;
+      const data = await tenantService.getTenant(tenantId);
+      setSchoolSettings({
+        name: data.name || '',
+        subdomain: data.subdomain || '',
+        logo: data.logo || '',
+        language: data.settings?.language || 'en',
+        theme: data.settings?.theme || {
+          primaryColor: '#3b82f6',
+          secondaryColor: '#1e40af',
+          accentColor: '#60a5fa'
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching school settings:', error);
+      showMessage('error', 'Failed to load school settings');
     }
   };
 
@@ -97,7 +137,7 @@ const Settings = () => {
 
   const handlePasswordChange = async (e) => {
     e.preventDefault();
-    
+
     if (password.newPassword !== password.confirmPassword) {
       showMessage('error', 'Passwords do not match');
       return;
@@ -132,12 +172,38 @@ const Settings = () => {
     }
   };
 
+  const handleSchoolUpdate = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const tenantId = user.tenant?._id || user.tenant;
+      await tenantService.updateTenant(tenantId, {
+        name: schoolSettings.name,
+        subdomain: schoolSettings.subdomain,
+        logo: schoolSettings.logo,
+        settings: {
+          language: schoolSettings.language,
+          theme: schoolSettings.theme
+        }
+      });
+      showMessage('success', 'School settings updated successfully');
+    } catch (error) {
+      showMessage('error', error.response?.data?.message || 'Failed to update school settings');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const tabs = [
     { id: 'profile', label: t('settings.profile'), icon: User },
     { id: 'security', label: t('settings.security'), icon: Lock },
     { id: 'notifications', label: t('settings.notifications'), icon: Bell },
     { id: 'preferences', label: t('settings.preferences'), icon: Globe }
   ];
+
+  if (user?.role === 'admin') {
+    tabs.push({ id: 'school', label: 'School', icon: Building });
+  }
 
   return (
     <div className="p-6">
@@ -146,9 +212,8 @@ const Settings = () => {
       </div>
 
       {message.text && (
-        <div className={`mb-4 p-4 rounded-lg ${
-          message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-        }`}>
+        <div className={`mb-4 p-4 rounded-lg ${message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+          }`}>
           {message.text}
         </div>
       )}
@@ -162,11 +227,10 @@ const Settings = () => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-6 py-4 border-b-2 font-medium text-sm ${
-                    activeTab === tab.id
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+                  className={`flex items-center gap-2 px-6 py-4 border-b-2 font-medium text-sm ${activeTab === tab.id
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
                 >
                   <Icon className="w-5 h-5" />
                   {tab.label}
@@ -412,6 +476,182 @@ const Settings = () => {
               >
                 <Save className="w-4 h-4" />
                 {t('common.save')}
+              </button>
+            </form>
+          )}
+
+          {activeTab === 'school' && (
+            <form onSubmit={handleSchoolUpdate} className="space-y-6 max-w-2xl">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  School Name
+                </label>
+                <input
+                  type="text"
+                  value={schoolSettings.name}
+                  onChange={(e) => setSchoolSettings({ ...schoolSettings, name: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Subdomain
+                </label>
+                <div className="flex items-center">
+                  <input
+                    type="text"
+                    value={schoolSettings.subdomain}
+                    onChange={(e) => setSchoolSettings({ ...schoolSettings, subdomain: e.target.value })}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-l-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <span className="px-4 py-2 bg-gray-100 border border-l-0 border-gray-300 rounded-r-lg text-gray-500">
+                    .school-system.com
+                  </span>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  School Logo
+                </label>
+                <div className="flex items-center gap-4">
+                  {schoolSettings.logo && (
+                    <img
+                      src={schoolSettings.logo}
+                      alt="School Logo"
+                      className="h-16 w-16 object-contain border rounded-lg"
+                    />
+                  )}
+                  <div className="flex-1">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                          if (file.size > 5 * 1024 * 1024) { // 5MB limit
+                            showMessage('error', 'Image size should be less than 5MB');
+                            return;
+                          }
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            setSchoolSettings({ ...schoolSettings, logo: reader.result });
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      className="block w-full text-sm text-gray-500
+                        file:mr-4 file:py-2 file:px-4
+                        file:rounded-full file:border-0
+                        file:text-sm file:font-semibold
+                        file:bg-blue-50 file:text-blue-700
+                        hover:file:bg-blue-100"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">PNG, JPG, GIF up to 5MB</p>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Default Language
+                </label>
+                <select
+                  value={schoolSettings.language}
+                  onChange={(e) => setSchoolSettings({ ...schoolSettings, language: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="en">English</option>
+                  <option value="so">Somali (Soomaali)</option>
+                </select>
+              </div>
+
+              <div className="border-t pt-4 mt-4">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Color Theme</h3>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Primary Color
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={schoolSettings.theme.primaryColor}
+                        onChange={(e) => setSchoolSettings({
+                          ...schoolSettings,
+                          theme: { ...schoolSettings.theme, primaryColor: e.target.value }
+                        })}
+                        className="h-10 w-10 rounded border border-gray-300 cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={schoolSettings.theme.primaryColor}
+                        onChange={(e) => setSchoolSettings({
+                          ...schoolSettings,
+                          theme: { ...schoolSettings.theme, primaryColor: e.target.value }
+                        })}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Secondary Color
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={schoolSettings.theme.secondaryColor}
+                        onChange={(e) => setSchoolSettings({
+                          ...schoolSettings,
+                          theme: { ...schoolSettings.theme, secondaryColor: e.target.value }
+                        })}
+                        className="h-10 w-10 rounded border border-gray-300 cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={schoolSettings.theme.secondaryColor}
+                        onChange={(e) => setSchoolSettings({
+                          ...schoolSettings,
+                          theme: { ...schoolSettings.theme, secondaryColor: e.target.value }
+                        })}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Accent Color
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={schoolSettings.theme.accentColor}
+                        onChange={(e) => setSchoolSettings({
+                          ...schoolSettings,
+                          theme: { ...schoolSettings.theme, accentColor: e.target.value }
+                        })}
+                        className="h-10 w-10 rounded border border-gray-300 cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={schoolSettings.theme.accentColor}
+                        onChange={(e) => setSchoolSettings({
+                          ...schoolSettings,
+                          theme: { ...schoolSettings.theme, accentColor: e.target.value }
+                        })}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex items-center gap-2 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
+              >
+                <Save className="w-4 h-4" />
+                Save School Settings
               </button>
             </form>
           )}

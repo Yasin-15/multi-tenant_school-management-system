@@ -144,6 +144,8 @@ export const updateTenant = async (req, res) => {
 
         const {
             name,
+            subdomain,
+            logo,
             contactEmail,
             contactPhone,
             address,
@@ -160,7 +162,20 @@ export const updateTenant = async (req, res) => {
             });
         }
 
+        // Check subdomain uniqueness if changing
+        if (subdomain && subdomain !== tenant.subdomain) {
+            const subdomainExists = await Tenant.findOne({ subdomain });
+            if (subdomainExists) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Subdomain already taken'
+                });
+            }
+            tenant.subdomain = subdomain;
+        }
+
         if (name) tenant.name = name;
+        if (logo) tenant.logo = logo;
         if (contactEmail) tenant.contactEmail = contactEmail;
         if (contactPhone) tenant.contactPhone = contactPhone;
         if (address) tenant.address = address;

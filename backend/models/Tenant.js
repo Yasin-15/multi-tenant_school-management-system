@@ -58,6 +58,20 @@ const tenantSchema = new mongoose.Schema({
       type: String,
       default: 'en'
     },
+    theme: {
+      primaryColor: {
+        type: String,
+        default: '#3b82f6'
+      },
+      secondaryColor: {
+        type: String,
+        default: '#1e40af'
+      },
+      accentColor: {
+        type: String,
+        default: '#60a5fa'
+      }
+    },
     maxStudents: {
       type: Number,
       default: 1000

@@ -153,7 +153,7 @@ export const createStudent = async (req, res) => {
 
         // Auto-generate IDs if not provided
         const tenantCode = getTenantCode(req.tenant);
-        
+
         if (!studentId) {
             studentId = await generateStudentId(req.tenant._id, tenantCode);
         } else {
@@ -395,3 +395,230 @@ export const addStudentNote = async (req, res) => {
         });
     }
 };
+
+/**
+ * @desc    Import students from Excel file
+ * @route   POST /api/students/import
+ * @access  Private (Admin)
+ */
+export const importStudentsFromExcel = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                message: 'No file uploaded'
+            });
+        }
+
+        const ExcelJS = (await import('exceljs')).default;
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(req.file.buffer);
+
+        const worksheet = workbook.getWorksheet('Students');
+        if (!worksheet) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid Excel file. Sheet "Students" not found.'
+            });
+        }
+
+        const results = {
+            success: [],
+            errors: [],
+            total: 0,
+            successCount: 0,
+            errorCount: 0
+        };
+
+        const tenantCode = getTenantCode(req.tenant);
+        const rows = [];
+
+        // Parse all rows first (skip header)
+        worksheet.eachRow((row, rowNumber) => {
+            if (rowNumber > 1) { // Skip header row
+                rows.push({ row, rowNumber });
+            }
+        });
+
+        results.total = rows.length;
+
+        // Process each row
+        for (const { row, rowNumber } of rows) {
+            try {
+                // Extract data from row
+                const rowData = {
+                    firstName: row.getCell(1).value?.toString().trim(),
+                    lastName: row.getCell(2).value?.toString().trim(),
+                    email: row.getCell(3).value?.toString().trim(),
+                    password: row.getCell(4).value?.toString().trim(),
+                    dateOfBirth: row.getCell(5).value,
+                    gender: row.getCell(6).value?.toString().trim().toLowerCase(),
+                    phone: row.getCell(7).value?.toString().trim(),
+                    admissionNumber: row.getCell(8).value?.toString().trim(),
+                    admissionDate: row.getCell(9).value,
+                    className: row.getCell(10).value?.toString().trim(),
+                    section: row.getCell(11).value?.toString().trim(),
+                    rollNumber: row.getCell(12).value?.toString().trim(),
+                    academicYear: row.getCell(13).value?.toString().trim() || new Date().getFullYear().toString(),
+                    guardianName: row.getCell(14).value?.toString().trim(),
+                    guardianPhone: row.getCell(15).value?.toString().trim(),
+                    guardianEmail: row.getCell(16).value?.toString().trim(),
+                    guardianRelation: row.getCell(17).value?.toString().trim().toLowerCase(),
+                    bloodGroup: row.getCell(18).value?.toString().trim(),
+                    street: row.getCell(19).value?.toString().trim(),
+                    city: row.getCell(20).value?.toString().trim(),
+                    state: row.getCell(21).value?.toString().trim(),
+                    country: row.getCell(22).value?.toString().trim(),
+                    zipCode: row.getCell(23).value?.toString().trim()
+                };
+
+                // Validate required fields
+                const errors = [];
+                if (!rowData.firstName) errors.push('First name is required');
+                if (!rowData.lastName) errors.push('Last name is required');
+                if (!rowData.email) errors.push('Email is required');
+                if (!rowData.password) errors.push('Password is required');
+                if (!rowData.dateOfBirth) errors.push('Date of birth is required');
+                if (!rowData.gender) errors.push('Gender is required');
+                if (!rowData.admissionNumber) errors.push('Admission number is required');
+                if (!rowData.className) errors.push('Class name is required');
+
+                // Validate gender
+                if (rowData.gender && !['male', 'female', 'other'].includes(rowData.gender)) {
+                    errors.push('Gender must be male, female, or other');
+                }
+
+                // Validate blood group if provided
+                if (rowData.bloodGroup && !['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].includes(rowData.bloodGroup)) {
+                    errors.push('Invalid blood group');
+                }
+
+                if (errors.length > 0) {
+                    throw new Error(errors.join(', '));
+                }
+
+                // Check if email already exists
+                const existingUser = await User.findOne({
+                    email: rowData.email,
+                    tenant: req.tenant._id
+                });
+
+                if (existingUser) {
+                    throw new Error('Email already exists');
+                }
+
+                // Find class by name
+                const Class = (await import('../models/Class.js')).default;
+                const classDoc = await Class.findOne({
+                    tenant: req.tenant._id,
+                    name: rowData.className,
+                    isActive: true
+                });
+
+                if (!classDoc) {
+                    throw new Error(`Class "${rowData.className}" not found`);
+                }
+
+                // Parse dates
+                let dateOfBirth = rowData.dateOfBirth;
+                if (typeof dateOfBirth === 'string') {
+                    dateOfBirth = new Date(dateOfBirth);
+                } else if (typeof dateOfBirth === 'number') {
+                    // Excel serial date
+                    dateOfBirth = new Date((dateOfBirth - 25569) * 86400 * 1000);
+                }
+
+                let admissionDate = rowData.admissionDate;
+                if (admissionDate) {
+                    if (typeof admissionDate === 'string') {
+                        admissionDate = new Date(admissionDate);
+                    } else if (typeof admissionDate === 'number') {
+                        admissionDate = new Date((admissionDate - 25569) * 86400 * 1000);
+                    }
+                }
+
+                // Auto-generate IDs
+                const studentId = await generateStudentId(req.tenant._id, tenantCode);
+                const hemisId = await generateHemisId(req.tenant._id, tenantCode);
+
+                let rollNumber = rowData.rollNumber;
+                if (!rollNumber && classDoc && rowData.section) {
+                    rollNumber = await generateRollNumber(req.tenant._id, classDoc._id, rowData.section);
+                }
+
+                // Create user account
+                const user = await User.create({
+                    tenant: req.tenant._id,
+                    email: rowData.email,
+                    password: rowData.password,
+                    role: 'student',
+                    firstName: rowData.firstName,
+                    lastName: rowData.lastName,
+                    phone: rowData.phone,
+                    dateOfBirth: dateOfBirth,
+                    gender: rowData.gender,
+                    address: {
+                        street: rowData.street,
+                        city: rowData.city,
+                        state: rowData.state,
+                        country: rowData.country,
+                        zipCode: rowData.zipCode
+                    },
+                    isActive: true,
+                    emailVerified: true
+                });
+
+                // Create student profile
+                const student = await Student.create({
+                    tenant: req.tenant._id,
+                    user: user._id,
+                    studentId,
+                    hemisId,
+                    admissionNumber: rowData.admissionNumber,
+                    admissionDate: admissionDate || new Date(),
+                    class: classDoc._id,
+                    section: rowData.section,
+                    rollNumber: rollNumber,
+                    academicYear: rowData.academicYear,
+                    guardianName: rowData.guardianName,
+                    guardianPhone: rowData.guardianPhone,
+                    guardianEmail: rowData.guardianEmail,
+                    guardianRelation: rowData.guardianRelation,
+                    bloodGroup: rowData.bloodGroup,
+                    status: 'active'
+                });
+
+                results.success.push({
+                    row: rowNumber,
+                    name: `${rowData.firstName} ${rowData.lastName}`,
+                    email: rowData.email,
+                    studentId: student.studentId
+                });
+                results.successCount++;
+
+            } catch (error) {
+                results.errors.push({
+                    row: rowNumber,
+                    email: row.getCell(3).value?.toString().trim(),
+                    error: error.message
+                });
+                results.errorCount++;
+            }
+        }
+
+        res.status(200).json({
+            success: true,
+            message: `Import completed. ${results.successCount} students imported, ${results.errorCount} errors.`,
+            data: results
+        });
+
+    } catch (error) {
+        console.error('Import students error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error importing students',
+            error: error.message
+        });
+    }
+};
+

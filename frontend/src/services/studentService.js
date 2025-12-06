@@ -35,4 +35,27 @@ export const studentService = {
     const response = await api.get('/students/my-profile');
     return response.data;
   },
+
+  importFromExcel: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await api.post('/students/import', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  downloadTemplate: () => {
+    // For now, this points to the backend template file
+    // You could create an endpoint to serve this file or host it statically
+    const link = document.createElement('a');
+    link.href = '/templates/student-import-template.xlsx';
+    link.download = 'student-import-template.xlsx';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  },
 };
