@@ -78,7 +78,7 @@ const Students = () => {
 
   const fetchStudents = async () => {
     try {
-      const response = await studentService.getAll();
+      const response = await studentService.getAll({ limit: 1000 });
       setStudents(response.data || []);
     } catch (error) {
       console.error('Error fetching students:', error);
