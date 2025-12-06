@@ -49,11 +49,14 @@ export const studentService = {
   },
 
   downloadTemplate: () => {
-    // For now, this points to the backend template file
-    // You could create an endpoint to serve this file or host it statically
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+    const baseUrl = apiUrl.replace('/api', '');
+    const templateUrl = `${baseUrl}/templates/student-import-template.xlsx`;
+
     const link = document.createElement('a');
-    link.href = '/templates/student-import-template.xlsx';
+    link.href = templateUrl;
     link.download = 'student-import-template.xlsx';
+    link.target = '_blank';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

@@ -100,6 +100,9 @@ app.use('/api/', limiter);
 // Make io accessible to routes
 app.set('io', io);
 
+// Serve static files from templates directory
+app.use('/templates', express.static('templates'));
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/students', studentRoutes);
