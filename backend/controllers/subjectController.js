@@ -70,6 +70,39 @@ export const getSubjects = async (req, res) => {
         if (type) query.type = type;
         if (isActive !== undefined) query.isActive = isActive === 'true';
 
+        // If user is a teacher, only show subjects they teach
+        if (req.user.role === 'teacher') {
+            const Teacher = (await import('../models/Teacher.js')).default;
+            const Class = (await import('../models/Class.js')).default;
+
+            // Find the teacher's ID
+            const teacher = await Teacher.findOne({ user: req.user._id });
+
+            if (teacher) {
+                // Find all classes where this teacher teaches
+                const classes = await Class.find({
+                    tenant: req.user.tenant,
+                    $or: [
+                        { teachers: teacher._id },
+                        { 'subjects.teacher': teacher._id }
+                    ]
+                });
+
+                // Extract subject IDs where teacher teaches
+                const subjectIds = new Set();
+                classes.forEach(cls => {
+                    cls.subjects.forEach(subj => {
+                        if (subj.teacher && subj.teacher.toString() === teacher._id.toString()) {
+                            subjectIds.add(subj.subject.toString());
+                        }
+                    });
+                });
+
+                // Filter to only those subjects
+                query._id = { $in: Array.from(subjectIds) };
+            }
+        }
+
         const subjects = await Subject.find(query)
             .sort({ name: 1 });
 

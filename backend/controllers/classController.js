@@ -12,7 +12,7 @@ export const createClass = async (req, res) => {
             grade,
             section,
             academicYear,
-            classTeacher,
+            teachers,
             maxStudents,
             capacity,
             room,
@@ -46,7 +46,7 @@ export const createClass = async (req, res) => {
             grade,
             section,
             academicYear,
-            classTeacher: classTeacher || undefined,
+            teachers: teachers && teachers.length > 0 ? teachers : [],
             maxStudents: capacity || maxStudents || 40,
             room,
             isActive: isActive !== undefined ? isActive : true
@@ -69,7 +69,7 @@ export const createClass = async (req, res) => {
         const newClass = await Class.create(classData);
 
         // Populate the response
-        await newClass.populate('classTeacher');
+        await newClass.populate('teachers');
         await newClass.populate('subjects.subject');
 
         res.status(201).json({
@@ -108,7 +108,7 @@ export const getClasses = async (req, res) => {
             const teacher = await Teacher.findOne({ user: req.user._id });
             if (teacher) {
                 query.$or = [
-                    { classTeacher: teacher._id },
+                    { teachers: teacher._id },
                     { 'subjects.teacher': teacher._id }
                 ];
             }
@@ -116,7 +116,7 @@ export const getClasses = async (req, res) => {
 
         const classes = await Class.find(query)
             .populate({
-                path: 'classTeacher',
+                path: 'teachers',
                 populate: {
                     path: 'user',
                     select: 'firstName lastName email'
@@ -150,7 +150,7 @@ export const getClassById = async (req, res) => {
             _id: req.params.id,
             tenant: req.user.tenant
         })
-            .populate('classTeacher')
+            .populate('teachers')
             .populate('subjects.subject')
             .populate('subjects.teacher');
 
@@ -198,7 +198,7 @@ export const updateClass = async (req, res) => {
             grade,
             section,
             academicYear,
-            classTeacher,
+            teachers,
             maxStudents,
             capacity,
             room,
@@ -225,7 +225,7 @@ export const updateClass = async (req, res) => {
         if (grade !== undefined) classObj.grade = grade;
         if (section) classObj.section = section;
         if (academicYear) classObj.academicYear = academicYear;
-        if (classTeacher !== undefined) classObj.classTeacher = classTeacher || null;
+        if (teachers !== undefined) classObj.teachers = teachers || [];
         if (maxStudents) classObj.maxStudents = maxStudents;
         if (capacity) classObj.maxStudents = capacity; // Handle capacity as maxStudents
         if (room !== undefined) classObj.room = room;
@@ -250,7 +250,7 @@ export const updateClass = async (req, res) => {
         await classObj.save();
 
         // Populate the response
-        await classObj.populate('classTeacher');
+        await classObj.populate('teachers');
         await classObj.populate('subjects.subject');
 
         res.status(200).json({

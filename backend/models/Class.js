@@ -23,10 +23,10 @@ const classSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    classTeacher: {
+    teachers: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Teacher'
-    },
+    }],
     subjects: [{
         subject: {
             type: mongoose.Schema.Types.ObjectId,
