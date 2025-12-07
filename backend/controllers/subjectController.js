@@ -88,11 +88,17 @@ export const getSubjects = async (req, res) => {
                     ]
                 });
 
-                // Extract subject IDs where teacher teaches
+                // Extract subject IDs from classes where teacher is assigned
                 const subjectIds = new Set();
                 classes.forEach(cls => {
                     cls.subjects.forEach(subj => {
-                        if (subj.teacher && subj.teacher.toString() === teacher._id.toString()) {
+                        // Include subject if:
+                        // 1. Teacher is specifically assigned to this subject, OR
+                        // 2. Teacher is in the class teachers array (teaches all subjects)
+                        const isSpecificTeacher = subj.teacher && subj.teacher.toString() === teacher._id.toString();
+                        const isClassTeacher = cls.teachers.some(t => t.toString() === teacher._id.toString());
+
+                        if (isSpecificTeacher || isClassTeacher) {
                             subjectIds.add(subj.subject.toString());
                         }
                     });
