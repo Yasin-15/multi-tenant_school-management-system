@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Save, BookOpen } from 'lucide-react';
+import { Save, BookOpen, Search, ArrowUpDown } from 'lucide-react';
 import { classService } from '../../services/classService';
 import { studentService } from '../../services/studentService';
 import { subjectService } from '../../services/subjectService';
@@ -24,6 +24,8 @@ const TeacherGrades = () => {
   const [grades, setGrades] = useState({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
 
   useEffect(() => {
     fetchClasses();
@@ -94,6 +96,42 @@ const TeacherGrades = () => {
     if (percentage >= 50) return 'D';
     return 'F';
   };
+
+  const handleSort = (key) => {
+    let direction = 'ascending';
+    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const filteredAndSortedStudents = students
+    .filter((student) => {
+      const fullName = `${student.user?.firstName} ${student.user?.lastName}`.toLowerCase();
+      const rollNo = student.rollNumber?.toLowerCase() || '';
+      const search = searchTerm.toLowerCase();
+      return fullName.includes(search) || rollNo.includes(search);
+    })
+    .sort((a, b) => {
+      if (!sortConfig.key) return 0;
+
+      let aValue, bValue;
+      if (sortConfig.key === 'name') {
+        aValue = `${a.user?.firstName} ${a.user?.lastName}`.toLowerCase();
+        bValue = `${b.user?.firstName} ${b.user?.lastName}`.toLowerCase();
+      } else if (sortConfig.key === 'rollNumber') {
+        aValue = a.rollNumber || '';
+        bValue = b.rollNumber || '';
+      }
+
+      if (aValue < bValue) {
+        return sortConfig.direction === 'ascending' ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortConfig.direction === 'ascending' ? 1 : -1;
+      }
+      return 0;
+    });
 
   const handleSaveGrades = async () => {
     if (!selectedClass || !selectedSubject || !examType || !examName) {
@@ -323,6 +361,19 @@ const TeacherGrades = () => {
         </div>
       </div>
 
+      <div className="mb-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+          <Input
+            type="text"
+            placeholder="Search by student name or roll number..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+      </div>
+
       {loading ? (
         <div className="text-center py-8">Loading students...</div>
       ) : students.length > 0 ? (
@@ -331,15 +382,31 @@ const TeacherGrades = () => {
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Roll No</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Student Name</th>
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort('rollNumber')}
+                  >
+                    <div className="flex items-center">
+                      Roll No
+                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </div>
+                  </th>
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort('name')}
+                  >
+                    <div className="flex items-center">
+                      Student Name
+                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </div>
+                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Marks Obtained</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Grade</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Remarks</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {students.map((student) => {
+                {filteredAndSortedStudents.map((student) => {
                   const marks = grades[student._id]?.marksObtained;
                   const grade = marks ? calculateGrade(parseInt(marks), parseInt(totalMarks)) : '-';
 
