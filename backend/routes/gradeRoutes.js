@@ -8,7 +8,8 @@ import {
     deleteGrade,
     getClassGradesReport,
     bulkCreateGrades,
-    exportGrades
+    exportGrades,
+    getMyGrades
 } from '../controllers/gradeController.js';
 import { protect, authorize } from '../middleware/auth.js';
 import { tenantMiddleware } from '../middleware/tenant.js';
@@ -21,6 +22,9 @@ router.use(protect);
 
 // Export grades (admin, teacher)
 router.get('/export', authorize('admin', 'teacher'), exportGrades);
+
+// Get my grades (student only)
+router.get('/my-grades', authorize('student'), getMyGrades);
 
 // Get all grades (admin, teacher)
 router.get('/', authorize('admin', 'teacher'), getGrades);

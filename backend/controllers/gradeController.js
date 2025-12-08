@@ -10,9 +10,9 @@ import Subject from '../models/Subject.js';
  */
 export const getGrades = async (req, res) => {
     try {
-        const { 
-            student, class: classId, subject, examType, 
-            month, academicYear, page = 1, limit = 50 
+        const {
+            student, class: classId, subject, examType,
+            month, academicYear, page = 1, limit = 50
         } = req.query;
 
         console.log('Get grades request:', { classId, student, subject, examType, tenant: req.tenant?._id });
@@ -125,7 +125,7 @@ export const getStudentGrades = async (req, res) => {
             });
         }
 
-        const query = { 
+        const query = {
             tenant: req.tenant._id,
             student: studentId
         };
@@ -143,7 +143,7 @@ export const getStudentGrades = async (req, res) => {
             totalExams: grades.length,
             monthlyExams: grades.filter(g => g.examType === 'monthly').length,
             chapterExams: grades.filter(g => g.examType === 'chapter').length,
-            averagePercentage: grades.length > 0 
+            averagePercentage: grades.length > 0
                 ? (grades.reduce((sum, g) => sum + g.percentage, 0) / grades.length).toFixed(2)
                 : 0
         };
@@ -164,6 +164,65 @@ export const getStudentGrades = async (req, res) => {
 };
 
 /**
+ * @desc    Get my grades (logged in student)
+ * @route   GET /api/grades/my-grades
+ * @access  Private (Student)
+ */
+export const getMyGrades = async (req, res) => {
+    try {
+        const student = await Student.findOne({
+            user: req.user._id,
+            tenant: req.tenant._id
+        });
+
+        if (!student) {
+            return res.status(404).json({
+                success: false,
+                message: 'Student profile not found'
+            });
+        }
+
+        const { academicYear, examType } = req.query;
+
+        const query = {
+            tenant: req.tenant._id,
+            student: student._id
+        };
+
+        if (academicYear) query.academicYear = academicYear;
+        if (examType) query.examType = examType;
+
+        const grades = await Grade.find(query)
+            .populate('subject')
+            .populate('class')
+            .sort({ examDate: -1 });
+
+        // Calculate statistics
+        const stats = {
+            totalExams: grades.length,
+            monthlyExams: grades.filter(g => g.examType === 'monthly').length,
+            chapterExams: grades.filter(g => g.examType === 'chapter').length,
+            averagePercentage: grades.length > 0
+                ? (grades.reduce((sum, g) => sum + g.percentage, 0) / grades.length).toFixed(2)
+                : 0
+        };
+
+        res.status(200).json({
+            success: true,
+            data: grades,
+            stats
+        });
+    } catch (error) {
+        console.error('Get my grades error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching grades',
+            error: error.message
+        });
+    }
+};
+
+/**
  * @desc    Create grade
  * @route   POST /api/grades
  * @access  Private (Admin, Teacher)
@@ -177,7 +236,7 @@ export const createGrade = async (req, res) => {
         } = req.body;
 
         // Validate required fields
-        if (!student || !classId || !subject || !examType || !examName || 
+        if (!student || !classId || !subject || !examType || !examName ||
             !examDate || !totalMarks || obtainedMarks === undefined || !academicYear) {
             return res.status(400).json({
                 success: false,
@@ -400,13 +459,13 @@ export const getClassGradesReport = async (req, res) => {
         const stats = {
             totalStudents: new Set(grades.map(g => g.student._id.toString())).size,
             totalExams: grades.length,
-            averagePercentage: grades.length > 0 
+            averagePercentage: grades.length > 0
                 ? (grades.reduce((sum, g) => sum + g.percentage, 0) / grades.length).toFixed(2)
                 : 0,
-            highestScore: grades.length > 0 
+            highestScore: grades.length > 0
                 ? Math.max(...grades.map(g => g.percentage))
                 : 0,
-            lowestScore: grades.length > 0 
+            lowestScore: grades.length > 0
                 ? Math.min(...grades.map(g => g.percentage))
                 : 0
         };
@@ -456,7 +515,7 @@ export const bulkCreateGrades = async (req, res) => {
                 } = gradeData;
 
                 // Validate required fields
-                if (!student || !classId || !subject || !examType || !examName || 
+                if (!student || !classId || !subject || !examType || !examName ||
                     !examDate || !totalMarks || obtainedMarks === undefined || !academicYear) {
                     results.failed.push({
                         data: gradeData,
@@ -584,17 +643,17 @@ export const exportGrades = async (req, res) => {
 
         // Create CSV rows
         const csvRows = grades.map(grade => {
-            const studentName = grade.student?.user 
+            const studentName = grade.student?.user
                 ? `${grade.student.user.firstName || ''} ${grade.student.user.lastName || ''}`.trim()
                 : 'N/A';
-            const className = grade.class 
+            const className = grade.class
                 ? `${grade.class.name || ''} - ${grade.class.section || ''}`.trim()
                 : 'N/A';
             const subjectName = grade.subject?.name || 'N/A';
-            const examDate = grade.examDate 
+            const examDate = grade.examDate
                 ? new Date(grade.examDate).toLocaleDateString('en-US')
                 : '';
-            
+
             return [
                 studentName,
                 className,
@@ -627,7 +686,7 @@ export const exportGrades = async (req, res) => {
     } catch (error) {
         console.error('Export grades error:', error);
         console.error('Error stack:', error.stack);
-        
+
         res.status(500).json({
             success: false,
             message: 'Error exporting grades',

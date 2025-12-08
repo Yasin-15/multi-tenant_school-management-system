@@ -21,6 +21,11 @@ export const gradeService = {
     return response.data;
   },
 
+  getMyGrades: async (params) => {
+    const response = await api.get('/grades/my-grades', { params });
+    return response.data;
+  },
+
   getByClass: async (classId, params) => {
     const response = await api.get('/grades', {
       params: { class: classId, ...params },
