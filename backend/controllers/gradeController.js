@@ -1,10 +1,8 @@
 import Grade from '../models/Grade.js';
 import Student from '../models/Student.js';
-import Class from '../models/Class.js';
-import Subject from '../models/Subject.js';
 
 /**
- * @desc    Get all grades with filters
+ * @desc    Get all grades with filters and optional class organization
  * @route   GET /api/grades
  * @access  Private (Admin, Teacher)
  */
@@ -12,10 +10,10 @@ export const getGrades = async (req, res) => {
     try {
         const {
             student, class: classId, subject, examType,
-            month, academicYear, page = 1, limit = 50
+            month, academicYear, page = 1, limit = 50, organizeByClass
         } = req.query;
 
-        console.log('Get grades request:', { classId, student, subject, examType, tenant: req.tenant?._id });
+        console.log('Get grades request:', { classId, student, subject, examType, organizeByClass, tenant: req.tenant?._id });
 
         const query = { tenant: req.tenant._id };
 
@@ -33,23 +31,85 @@ export const getGrades = async (req, res) => {
                 path: 'student',
                 populate: { path: 'user', select: '-password' }
             })
-            .populate('class')
-            .populate('subject')
+            .populate('class', 'name section')
+            .populate('subject', 'name')
             .populate('enteredBy', 'firstName lastName')
             .limit(limit * 1)
             .skip((page - 1) * limit)
-            .sort({ examDate: -1 });
+            .sort({ 'class.name': 1, 'class.section': 1, 'student.rollNumber': 1, 'subject.name': 1, examDate: -1 });
 
         console.log('Found grades:', grades.length);
 
         const count = await Grade.countDocuments(query);
+
+        let responseData = grades;
+
+        // If organizing by class, group the grades
+        if (organizeByClass === 'true') {
+            const gradesByClass = {};
+            
+            grades.forEach(grade => {
+                const classKey = grade.class ? `${grade.class.name}-${grade.class.section}` : 'Unknown Class';
+                const classId = grade.class?._id?.toString() || 'unknown';
+                
+                if (!gradesByClass[classKey]) {
+                    gradesByClass[classKey] = {
+                        classInfo: grade.class,
+                        classId: classId,
+                        students: {},
+                        totalGrades: 0,
+                        subjects: new Set()
+                    };
+                }
+                
+                const studentKey = grade.student?._id?.toString() || 'unknown';
+                if (!gradesByClass[classKey].students[studentKey]) {
+                    gradesByClass[classKey].students[studentKey] = {
+                        student: grade.student,
+                        grades: [],
+                        subjectGrades: {}
+                    };
+                }
+                
+                gradesByClass[classKey].students[studentKey].grades.push(grade);
+                gradesByClass[classKey].totalGrades++;
+                
+                // Group by subject for each student
+                const subjectName = grade.subject?.name || 'Unknown Subject';
+                gradesByClass[classKey].subjects.add(subjectName);
+                
+                if (!gradesByClass[classKey].students[studentKey].subjectGrades[subjectName]) {
+                    gradesByClass[classKey].students[studentKey].subjectGrades[subjectName] = [];
+                }
+                gradesByClass[classKey].students[studentKey].subjectGrades[subjectName].push(grade);
+            });
+
+            // Convert sets to arrays and calculate statistics
+            Object.keys(gradesByClass).forEach(classKey => {
+                gradesByClass[classKey].subjects = Array.from(gradesByClass[classKey].subjects);
+                gradesByClass[classKey].studentsArray = Object.values(gradesByClass[classKey].students);
+                
+                // Calculate class statistics
+                const allGrades = gradesByClass[classKey].studentsArray.flatMap(s => s.grades);
+                gradesByClass[classKey].stats = {
+                    totalStudents: gradesByClass[classKey].studentsArray.length,
+                    totalGrades: allGrades.length,
+                    averagePercentage: allGrades.length > 0 
+                        ? (allGrades.reduce((sum, g) => sum + (g.percentage || 0), 0) / allGrades.length).toFixed(2)
+                        : 0
+                };
+            });
+
+            responseData = gradesByClass;
+        }
 
         res.status(200).json({
             success: true,
             count,
             totalPages: Math.ceil(count / limit),
             currentPage: page,
-            data: grades
+            data: responseData,
+            organizedByClass: organizeByClass === 'true'
         });
     } catch (error) {
         console.error('Get grades error:', error);
@@ -429,7 +489,7 @@ export const deleteGrade = async (req, res) => {
 };
 
 /**
- * @desc    Get class grades report
+ * @desc    Get class grades report organized by class
  * @route   GET /api/grades/class/:classId/report
  * @access  Private (Admin, Teacher)
  */
@@ -453,9 +513,57 @@ export const getClassGradesReport = async (req, res) => {
                 populate: { path: 'user', select: 'firstName lastName' }
             })
             .populate('subject')
-            .sort({ examDate: -1 });
+            .populate('class', 'name section')
+            .sort({ 'student.rollNumber': 1, 'subject.name': 1, examDate: -1 });
 
-        // Calculate class statistics
+        // Group grades by student for better organization
+        const gradesByStudent = {};
+        grades.forEach(grade => {
+            const studentId = grade.student._id.toString();
+            if (!gradesByStudent[studentId]) {
+                gradesByStudent[studentId] = {
+                    student: grade.student,
+                    grades: []
+                };
+            }
+            gradesByStudent[studentId].grades.push(grade);
+        });
+
+        // Calculate individual student statistics
+        const studentsWithStats = Object.values(gradesByStudent).map(studentData => {
+            const studentGrades = studentData.grades;
+            const totalPercentage = studentGrades.reduce((sum, g) => sum + g.percentage, 0);
+            const averagePercentage = studentGrades.length > 0 ? (totalPercentage / studentGrades.length) : 0;
+            
+            // Group by subject for subject-wise performance
+            const subjectPerformance = {};
+            studentGrades.forEach(grade => {
+                const subjectName = grade.subject.name;
+                if (!subjectPerformance[subjectName]) {
+                    subjectPerformance[subjectName] = [];
+                }
+                subjectPerformance[subjectName].push(grade);
+            });
+
+            return {
+                student: studentData.student,
+                grades: studentGrades,
+                averagePercentage: averagePercentage.toFixed(2),
+                totalExams: studentGrades.length,
+                subjectPerformance,
+                highestScore: studentGrades.length > 0 ? Math.max(...studentGrades.map(g => g.percentage)) : 0,
+                lowestScore: studentGrades.length > 0 ? Math.min(...studentGrades.map(g => g.percentage)) : 0
+            };
+        });
+
+        // Sort students by roll number
+        studentsWithStats.sort((a, b) => {
+            const rollA = a.student.rollNumber || '';
+            const rollB = b.student.rollNumber || '';
+            return rollA.localeCompare(rollB, undefined, { numeric: true });
+        });
+
+        // Calculate overall class statistics
         const stats = {
             totalStudents: new Set(grades.map(g => g.student._id.toString())).size,
             totalExams: grades.length,
@@ -467,13 +575,42 @@ export const getClassGradesReport = async (req, res) => {
                 : 0,
             lowestScore: grades.length > 0
                 ? Math.min(...grades.map(g => g.percentage))
-                : 0
+                : 0,
+            subjectBreakdown: {}
         };
+
+        // Calculate subject-wise class statistics
+        const subjectStats = {};
+        grades.forEach(grade => {
+            const subjectName = grade.subject.name;
+            if (!subjectStats[subjectName]) {
+                subjectStats[subjectName] = {
+                    totalMarks: 0,
+                    count: 0,
+                    grades: []
+                };
+            }
+            subjectStats[subjectName].totalMarks += grade.percentage;
+            subjectStats[subjectName].count += 1;
+            subjectStats[subjectName].grades.push(grade);
+        });
+
+        Object.keys(subjectStats).forEach(subjectName => {
+            const subjectData = subjectStats[subjectName];
+            stats.subjectBreakdown[subjectName] = {
+                averagePercentage: (subjectData.totalMarks / subjectData.count).toFixed(2),
+                totalExams: subjectData.count,
+                highestScore: Math.max(...subjectData.grades.map(g => g.percentage)),
+                lowestScore: Math.min(...subjectData.grades.map(g => g.percentage))
+            };
+        });
 
         res.status(200).json({
             success: true,
             data: grades,
-            stats
+            studentsWithStats,
+            stats,
+            classInfo: grades.length > 0 ? grades[0].class : null
         });
     } catch (error) {
         console.error('Get class report error:', error);
@@ -596,15 +733,15 @@ export const bulkCreateGrades = async (req, res) => {
 };
 
 /**
- * @desc    Export grades to CSV (returns JSON with CSV data)
+ * @desc    Export grades to CSV with subject separation (returns JSON with CSV data)
  * @route   GET /api/grades/export
  * @access  Private (Admin, Teacher)
  */
 export const exportGrades = async (req, res) => {
     try {
-        const { class: classId, subject, examType, academicYear } = req.query;
+        const { class: classId, subject, examType, academicYear, separateBySubject } = req.query;
 
-        console.log('Export grades request:', { classId, subject, examType, academicYear, tenant: req.tenant?._id });
+        console.log('Export grades request:', { classId, subject, examType, academicYear, separateBySubject, tenant: req.tenant?._id });
 
         const query = { tenant: req.tenant._id };
 
@@ -622,67 +759,149 @@ export const exportGrades = async (req, res) => {
             })
             .populate('class', 'name section')
             .populate('subject', 'name')
-            .sort({ examDate: -1 });
+            .sort({ 'class.name': 1, 'subject.name': 1, 'student.rollNumber': 1, examDate: -1 });
 
         console.log('Found grades for export:', grades.length);
 
-        // Create CSV headers
-        const csvHeaders = [
-            'Student Name',
-            'Class',
-            'Subject',
-            'Exam Type',
-            'Exam Name',
-            'Exam Date',
-            'Total Marks',
-            'Obtained Marks',
-            'Percentage',
-            'Grade',
-            'Remarks'
-        ];
+        if (separateBySubject === 'true') {
+            // Group grades by subject
+            const gradesBySubject = {};
+            grades.forEach(grade => {
+                const subjectName = grade.subject?.name || 'Unknown Subject';
+                if (!gradesBySubject[subjectName]) {
+                    gradesBySubject[subjectName] = [];
+                }
+                gradesBySubject[subjectName].push(grade);
+            });
 
-        // Create CSV rows
-        const csvRows = grades.map(grade => {
-            const studentName = grade.student?.user
-                ? `${grade.student.user.firstName || ''} ${grade.student.user.lastName || ''}`.trim()
-                : 'N/A';
-            const className = grade.class
-                ? `${grade.class.name || ''} - ${grade.class.section || ''}`.trim()
-                : 'N/A';
-            const subjectName = grade.subject?.name || 'N/A';
-            const examDate = grade.examDate
-                ? new Date(grade.examDate).toLocaleDateString('en-US')
-                : '';
+            // Create separate CSV files for each subject
+            const csvFiles = {};
+            
+            Object.keys(gradesBySubject).forEach(subjectName => {
+                const subjectGrades = gradesBySubject[subjectName];
+                
+                // Create CSV headers
+                const csvHeaders = [
+                    'Roll Number',
+                    'Student Name',
+                    'Class',
+                    'Exam Type',
+                    'Exam Name',
+                    'Exam Date',
+                    'Total Marks',
+                    'Obtained Marks',
+                    'Percentage',
+                    'Grade',
+                    'Remarks'
+                ];
 
-            return [
-                studentName,
-                className,
-                subjectName,
-                grade.examType || '',
-                grade.examName || '',
-                examDate,
-                grade.totalMarks || '',
-                grade.obtainedMarks || '',
-                grade.percentage ? `${grade.percentage}` : '',
-                grade.grade || '',
-                (grade.remarks || '').replace(/"/g, '""') // Escape quotes in remarks
+                // Create CSV rows for this subject
+                const csvRows = subjectGrades.map(grade => {
+                    const studentName = grade.student?.user
+                        ? `${grade.student.user.firstName || ''} ${grade.student.user.lastName || ''}`.trim()
+                        : 'N/A';
+                    const className = grade.class
+                        ? `${grade.class.name || ''} - ${grade.class.section || ''}`.trim()
+                        : 'N/A';
+                    const examDate = grade.examDate
+                        ? new Date(grade.examDate).toLocaleDateString('en-US')
+                        : '';
+
+                    return [
+                        grade.student?.rollNumber || 'N/A',
+                        studentName,
+                        className,
+                        grade.examType || '',
+                        grade.examName || '',
+                        examDate,
+                        grade.totalMarks || '',
+                        grade.obtainedMarks || '',
+                        grade.percentage ? `${grade.percentage}` : '',
+                        grade.grade || '',
+                        (grade.remarks || '').replace(/"/g, '""') // Escape quotes in remarks
+                    ];
+                });
+
+                // Build CSV content for this subject
+                const csvContent = [
+                    csvHeaders.join(','),
+                    ...csvRows.map(row => row.map(cell => `"${cell}"`).join(','))
+                ].join('\n');
+
+                csvFiles[subjectName] = csvContent;
+            });
+
+            console.log('Subject-separated CSV files generated:', Object.keys(csvFiles).length);
+
+            // Return as JSON with multiple CSV files
+            res.status(200).json({
+                success: true,
+                data: csvFiles,
+                type: 'subject-separated',
+                filename: `grades-by-subject-${Date.now()}`
+            });
+        } else {
+            // Single CSV file with all grades
+            const csvHeaders = [
+                'Roll Number',
+                'Student Name',
+                'Class',
+                'Subject',
+                'Exam Type',
+                'Exam Name',
+                'Exam Date',
+                'Total Marks',
+                'Obtained Marks',
+                'Percentage',
+                'Grade',
+                'Remarks'
             ];
-        });
 
-        // Build CSV content
-        const csvContent = [
-            csvHeaders.join(','),
-            ...csvRows.map(row => row.map(cell => `"${cell}"`).join(','))
-        ].join('\n');
+            // Create CSV rows
+            const csvRows = grades.map(grade => {
+                const studentName = grade.student?.user
+                    ? `${grade.student.user.firstName || ''} ${grade.student.user.lastName || ''}`.trim()
+                    : 'N/A';
+                const className = grade.class
+                    ? `${grade.class.name || ''} - ${grade.class.section || ''}`.trim()
+                    : 'N/A';
+                const subjectName = grade.subject?.name || 'N/A';
+                const examDate = grade.examDate
+                    ? new Date(grade.examDate).toLocaleDateString('en-US')
+                    : '';
 
-        console.log('CSV content generated, length:', csvContent.length);
+                return [
+                    grade.student?.rollNumber || 'N/A',
+                    studentName,
+                    className,
+                    subjectName,
+                    grade.examType || '',
+                    grade.examName || '',
+                    examDate,
+                    grade.totalMarks || '',
+                    grade.obtainedMarks || '',
+                    grade.percentage ? `${grade.percentage}` : '',
+                    grade.grade || '',
+                    (grade.remarks || '').replace(/"/g, '""') // Escape quotes in remarks
+                ];
+            });
 
-        // Return as JSON with CSV content
-        res.status(200).json({
-            success: true,
-            data: csvContent,
-            filename: `grades-export-${Date.now()}.csv`
-        });
+            // Build CSV content
+            const csvContent = [
+                csvHeaders.join(','),
+                ...csvRows.map(row => row.map(cell => `"${cell}"`).join(','))
+            ].join('\n');
+
+            console.log('CSV content generated, length:', csvContent.length);
+
+            // Return as JSON with CSV content
+            res.status(200).json({
+                success: true,
+                data: csvContent,
+                type: 'single',
+                filename: `grades-export-${Date.now()}.csv`
+            });
+        }
     } catch (error) {
         console.error('Export grades error:', error);
         console.error('Error stack:', error.stack);
