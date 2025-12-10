@@ -20,6 +20,7 @@ const Timetable = () => {
         { start: '09:30', end: '10:00', type: 'break' },
         { start: '10:00', end: '10:40' },
         { start: '10:40', end: '11:20' },
+        { start: '11:20', end: '12:00' },
     ];
 
     useEffect(() => {

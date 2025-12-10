@@ -189,13 +189,29 @@ export const generateClassExcelReport = async (req, res) => {
 
         // Sort in memory since we can't sort by populated field in Mongoose find
         grades.sort((a, b) => {
-            const rollA = a.student.rollNumber || '';
-            const rollB = b.student.rollNumber || '';
-            // Compare roll numbers (numeric or string)
+            // Priority 1: Subject Name
+            const subjectA = a.subject?.name || '';
+            const subjectB = b.subject?.name || '';
+            if (subjectA !== subjectB) {
+                return subjectA.localeCompare(subjectB);
+            }
+
+            // Priority 2: Student Roll Number
+            const rollA = a.student?.rollNumber || '';
+            const rollB = b.student?.rollNumber || '';
+
+            // Try numeric comparison for roll numbers
+            const numA = parseInt(rollA);
+            const numB = parseInt(rollB);
+            if (!isNaN(numA) && !isNaN(numB) && numA !== numB) {
+                return numA - numB;
+            }
+
             if (rollA !== rollB) {
                 return rollA < rollB ? -1 : 1;
             }
-            // Secondary sort by exam date
+
+            // Priority 3: Exam Date (Descending)
             return new Date(b.examDate) - new Date(a.examDate);
         });
 
